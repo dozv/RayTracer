@@ -1,0 +1,14 @@
+---
+BasedOnStyle: Google
+IndentWidth: 2
+ColumnLimit: 80
+UseTab: Never
+MaxEmptyLinesToKeep: 2
+---
+Language: Cpp
+DerivePointerAlignment: false
+PointerAlignment: Left
+QualifierAlignment: Left
+SortIncludes: CaseSensitive
+SortUsingDeclarations: LexicographicNumeric
+...
