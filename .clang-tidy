@@ -1,5 +1,5 @@
 ---
-Checks: 'cppcoreguidelines-*,
+Checks: '-*, cppcoreguidelines-*,
 -cppcoreguidelines-avoid-magic-numbers,
 google-*,
 readability-identifier-naming,'
