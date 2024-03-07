@@ -4,9 +4,14 @@
 
 #include <array>
 #include <functional>
+#include <optional>
 #include <span>
 
 namespace utils::xm {
+namespace scalar {
+const float kEpsilon = DirectX::XMVectorGetX(DirectX::g_XMEpsilon);
+}  // namespace scalar
+
 std::span<DirectX::XMFLOAT3A> ApplyTransform(
     std::function<DirectX::XMFLOAT3A(const DirectX::XMFLOAT3A&)> transform,
     std::span<DirectX::XMFLOAT3A> output,
@@ -18,23 +23,42 @@ inline DirectX::XMFLOAT3A Store(DirectX::FXMVECTOR xm_v) {
   DirectX::XMStoreFloat3A(&result, xm_v);
   return result;
 }
+
+inline DirectX::XMVECTOR Load(DirectX::XMFLOAT3A v) {
+  return DirectX::XMLoadFloat3A(&v);
+}
+
+inline DirectX::XMFLOAT3A Transform(DirectX::XMFLOAT3A v,
+                                    DirectX::FXMMATRIX xm_m) {
+  return Store(DirectX::XMVector3Transform(Load(v), xm_m));
+}
 }  // namespace float3a
 
+namespace vector3 {
+inline float CalculateTripleProduct(DirectX::FXMVECTOR a, DirectX::FXMVECTOR b,
+                                    DirectX::FXMVECTOR c) {
+  return DirectX::XMVectorGetX(
+      DirectX::XMVector3Dot(DirectX::XMVector3Cross(a, b), c));
+}
+}  // namespace vector3
+
 namespace triangle {
-inline std::array<DirectX::XMFLOAT3A, 3> Assemble(
-    std::span<const DirectX::XMFLOAT3A> vertices, DirectX::XMINT3 face) {
-  return {vertices[face.x], vertices[face.y], vertices[face.z]};
+inline DirectX::XMVECTOR GetSurfaceNormal(DirectX::FXMVECTOR a,
+                                          DirectX::FXMVECTOR b,
+                                          DirectX::FXMVECTOR c) {
+  return DirectX::XMVector3Cross(DirectX::XMVectorSubtract(b, a),
+                                 DirectX::XMVectorSubtract(c, a));
 }
 
 void Load(DirectX::XMVECTOR& out_a, DirectX::XMVECTOR& out_b,
           DirectX::XMVECTOR& out_c,
           std::span<const DirectX::XMFLOAT3A> vertices, DirectX::XMINT3 face);
 
-DirectX::XMVECTOR GetBarycentrics(DirectX::FXMVECTOR a, DirectX::FXMVECTOR b,
-                                  DirectX::FXMVECTOR c,
-                                  DirectX::CXMVECTOR point);
-
-bool IsPointInside(DirectX::FXMVECTOR barycentrics);
+std::optional<DirectX::XMFLOAT3A> Intersect(DirectX::FXMVECTOR a,
+                                            DirectX::FXMVECTOR b,
+                                            DirectX::FXMVECTOR c,
+                                            DirectX::FXMVECTOR o,
+                                            DirectX::FXMVECTOR d);
 
 DirectX::XMVECTOR Interpolate(DirectX::FXMVECTOR a, DirectX::FXMVECTOR b,
                               DirectX::FXMVECTOR c,

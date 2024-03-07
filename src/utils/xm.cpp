@@ -13,28 +13,41 @@ void utils::xm::triangle::Load(DirectX::XMVECTOR& out_a,
   out_c = DirectX::XMLoadFloat3A(&vertices[face.z]);
 }
 
-DirectX::XMVECTOR utils::xm::triangle::GetBarycentrics(
+std::optional<DirectX::XMFLOAT3A> utils::xm::triangle::Intersect(
     DirectX::FXMVECTOR a, DirectX::FXMVECTOR b, DirectX::FXMVECTOR c,
-    DirectX::CXMVECTOR point) {
-  const auto xm_ab = DirectX::XMVectorSubtract(b, a);
-  const auto xm_ac = DirectX::XMVectorSubtract(c, a);
-  const auto xm_ap = DirectX::XMVectorSubtract(point, a);
-  const auto xm_abc = DirectX::XMVector2Cross(xm_ab, xm_ac);
-  const auto xm_apc = DirectX::XMVector2Cross(xm_ap, xm_ac);
-  const auto xm_abp = DirectX::XMVector2Cross(xm_ab, xm_ap);
-  const auto xm_abc_reciprocal = DirectX::XMVectorReciprocal(xm_abc);
-  const auto xm_beta = DirectX::XMVectorMultiply(xm_apc, xm_abc_reciprocal);
-  const auto xm_gamma = DirectX::XMVectorMultiply(xm_abp, xm_abc_reciprocal);
-  const auto beta = DirectX::XMVectorGetX(xm_beta);
-  const auto gamma = DirectX::XMVectorGetX(xm_gamma);
-  const auto alpha = 1.0f - beta - gamma;
-  return DirectX::XMVectorSet(alpha, beta, gamma, alpha + beta + gamma);
-}
+    DirectX::FXMVECTOR o, DirectX::FXMVECTOR d) {
+  const auto ab = DirectX::XMVectorSubtract(b, a);
+  const auto ac = DirectX::XMVectorSubtract(c, a);
+  const auto minus_d = DirectX::XMVectorNegate(d);
+  const float vol = utils::xm::vector3::CalculateTripleProduct(ab, ac, minus_d);
+  if (DirectX::XMScalarNearEqual(vol, 0.0f, utils::xm::scalar::kEpsilon)) {
+    return std::nullopt;
+  }
 
-bool utils::xm::triangle::IsPointInside(DirectX::FXMVECTOR barycentrics) {
-  return DirectX::XMVector4LessOrEqual(barycentrics, DirectX::g_XMOne) &&
-         DirectX::XMVector4GreaterOrEqual(barycentrics,
-                                          DirectX::XMVectorZero());
+  const auto ao = DirectX::XMVectorSubtract(o, a);
+  const float vol_beta =
+      utils::xm::vector3::CalculateTripleProduct(ao, ac, minus_d);
+
+  const float beta = vol_beta / vol;
+  if (beta < 0.0f || beta > 1.0f) {
+    return std::nullopt;
+  }
+
+  const float vol_gamma =
+      utils::xm::vector3::CalculateTripleProduct(ab, ao, minus_d);
+  const float gamma = vol_gamma / vol;
+
+  if (gamma < 0.0f || gamma > 1.0f || (beta + gamma) > 1.0f) {
+    return std::nullopt;
+  }
+
+  const float vol_t = utils::xm::vector3::CalculateTripleProduct(ab, ac, ao);
+  const float ray_param = vol_t / vol;
+  if (ray_param < 0.0f) {
+    return std::nullopt;
+  }
+
+  return DirectX::XMFLOAT3A{beta, gamma, ray_param};
 }
 
 DirectX::XMVECTOR utils::xm::triangle::Interpolate(

@@ -1,6 +1,7 @@
 #pragma once
 #include <WTypesbase.h>
 
+#include <bit>
 #include <execution>
 
 namespace utils::win32 {

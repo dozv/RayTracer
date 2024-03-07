@@ -6,15 +6,20 @@
 #include <algorithm>
 #include <bitset>
 #include <cmath>
+#include <optional>
 #include <vector>
 
 #include "common/common.h"
 #include "fps_camera.h"
+#include "model.h"
 #include "utils/win32.h"
 #include "utils/xm.h"
 
 int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance,
                     _In_ PWSTR cmd_line, _In_ int cmd_show) {
+  UNREFERENCED_PARAMETER(cmd_line);
+  UNREFERENCED_PARAMETER(cmd_show);
+  UNREFERENCED_PARAMETER(prev_instance);
   constexpr auto kWidth = 320;
   constexpr auto kHeight = 240;
   constexpr auto kAspectRatio =
@@ -40,33 +45,45 @@ int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance,
   bmi.bmiHeader.biBitCount = 16;
   bmi.bmiHeader.biClrUsed = BI_RGB;
 
-  std::vector<DirectX::XMFLOAT3A> vertices(
-      {DirectX::XMFLOAT3A(1.0f, -1.0f, -4.0f),
-       DirectX::XMFLOAT3A(-1.0f, -1.0f, -4.0f),
-       DirectX::XMFLOAT3A(0.0f, 1.0f, -4.0f),
-       DirectX::XMFLOAT3A(1.5f, -1.5f, -5.0f),
-       DirectX::XMFLOAT3A(-0.5f, -1.5f, -5.0f),
-       DirectX::XMFLOAT3A(0.5f, 0.5f, -5.0f)});
+  std::vector<
+      std::pair<std::vector<DirectX::XMFLOAT3A>, std::vector<DirectX::XMINT3>>>
+      meshes{};
+  meshes.push_back(model::LoadCube());
+  meshes.push_back(model::LoadCube());
+  meshes.push_back(model::LoadCube());
 
-  std::vector<DirectX::XMFLOAT3A> vertex_colors(
-      {DirectX::XMFLOAT3A(1.0f, 0.0f, 0.0f),
-       DirectX::XMFLOAT3A(0.0f, 1.0f, 0.0f),
-       DirectX::XMFLOAT3A(0.0f, 0.0f, 1.0f),
-       DirectX::XMFLOAT3A(1.0f, 1.0f, 0.0f),
-       DirectX::XMFLOAT3A(0.0f, 1.0f, 1.0f),
-       DirectX::XMFLOAT3A(1.0f, 0.0f, 1.0f)});
+  utils::xm::ApplyTransform(
+      [&](auto vertex) {
+        return utils::xm::float3a::Transform(
+            vertex, DirectX::XMMatrixTranslation(0.0f, 0.0f, -4.0f));
+      },
+      meshes[0].first, meshes[0].first);
 
-  std::vector<DirectX::XMINT3> faces(
-      {DirectX::XMINT3(0, 1, 2), DirectX::XMINT3(3, 4, 5)});
+  utils::xm::ApplyTransform(
+      [&](auto vertex) {
+        return utils::xm::float3a::Transform(
+            vertex, DirectX::XMMatrixTranslation(0.0f, 2.0f, -8.0f));
+      },
+      meshes[1].first, meshes[1].first);
+
+  utils::xm::ApplyTransform(
+      [&](auto vertex) {
+        return utils::xm::float3a::Transform(
+            vertex, DirectX::XMMatrixRotationRollPitchYaw(0.0f, 0.2f, 0.0f) *
+                        DirectX::XMMatrixScaling(2.0f, 2.0f, 2.0f) *
+                        DirectX::XMMatrixTranslation(0.0f, -2.0f, -16.0f));
+      },
+      meshes[2].first, meshes[2].first);
 
   constexpr auto kFps = 30;
-  LONGLONG last_time = utils::win32::GetMilliseconds();
   bool running = true;
   auto page = 0U;
   constexpr auto kSimulationTimeStep = 1000 / kFps;
   LONGLONG simulation_time = 0;
   std::bitset<256> key_states{};
   auto fps_camera = FpsCamera();
+  DirectX::XMVECTOR xm_light_position =
+      DirectX::XMVectorSet(2.0f, 10.0f, -1.0f, 0.0f);
 
   while (running) {
     const auto real_time = utils::win32::GetMilliseconds();
@@ -97,7 +114,6 @@ int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance,
 
     // Update.
     while (simulation_time < real_time) {
-      // TODO(Daniel): physics updates.
       constexpr auto kSpeed = 1E-2f;
       constexpr auto kRotationSpeed = 1E-1f;
 
@@ -127,6 +143,13 @@ int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance,
 
     auto camera_to_world_matrix = fps_camera.GetCameraToWorldMatrix();
 
+    utils::xm::ApplyTransform(
+        [&](auto vertex) {
+          return utils::xm::float3a::Transform(
+              vertex, DirectX::XMMatrixRotationRollPitchYaw(0.0f, 0.2f, 0.0f));
+        },
+        meshes[2].first, meshes[2].first);
+
     // Render.
     auto& current_view = (page ^= 1) ? front_buffer : back_buffer;
 
@@ -138,7 +161,7 @@ int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance,
             RemapRange(static_cast<float>(y) + 0.5f,
                        static_cast<float>(kHeight), 0.0f, -1.0f, 1.0f);
 
-        const float camera_x = kAspectRatio * kHalfAngleTan * ndc_x;
+        const float camera_x = kHalfAngleTan * ndc_x;
         const float camera_y = kInverseAspectRatio * kHalfAngleTan * ndc_y;
 
         DirectX::XMVECTOR xm_camera_origin = DirectX::g_XMZero;
@@ -154,41 +177,53 @@ int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance,
         float closest_distance = std::numeric_limits<float>::infinity();
         DirectX::XMFLOAT3A color = {0.0f, 0.0f, 0.0f};
 
-        for (auto& face : faces) {
-          DirectX::XMVECTOR xm_a, xm_b, xm_c;
-          utils::xm::triangle::Load(xm_a, xm_b, xm_c, vertices, face);
+        for (auto& mesh : meshes) {
+          for (auto& face : mesh.second) {
+            DirectX::XMVECTOR xm_a, xm_b, xm_c;
+            utils::xm::triangle::Load(xm_a, xm_b, xm_c, mesh.first, face);
 
-          float distance = 0.0f;
-          if (DirectX::TriangleTests::Intersects(xm_world_origin,
-                                                 xm_world_direction, xm_a, xm_b,
-                                                 xm_c, distance) &&
-              distance > 1.0f && distance < closest_distance) {
-            const auto intersection_point = utils::xm::ray::At(
-                xm_world_origin, xm_world_direction, distance);
-            const auto barycentrics = utils::xm::triangle::GetBarycentrics(
-                xm_a, xm_b, xm_c, intersection_point);
+            auto result = utils::xm::triangle::Intersect(
+                xm_a, xm_b, xm_c, xm_world_origin, xm_world_direction);
 
-            if (!utils::xm::triangle::IsPointInside(barycentrics)) break;
+            if (result.has_value() && result->z > 1.0f &&
+                result->z < closest_distance) {
+              const auto intersection_point = utils::xm::ray::At(
+                  xm_world_origin, xm_world_direction, result->z);
 
-            utils::xm::triangle::Load(xm_a, xm_b, xm_c, vertex_colors, face);
-            const auto xm_color = utils::xm::triangle::Interpolate(
-                xm_a, xm_b, xm_c, barycentrics);
-            color = utils::xm::float3a::Store(xm_color);
+              // Calculate Lambertian shading.
+              DirectX::XMVECTOR xm_surface_normal = DirectX::XMVector3Normalize(
+                  utils::xm::triangle::GetSurfaceNormal(xm_a, xm_b, xm_c));
 
-            closest_distance = distance;
-          }
-        }
+              DirectX::XMVECTOR xm_light_direction =
+                  DirectX::XMVector3Normalize(DirectX::XMVectorSubtract(
+                      xm_light_position, intersection_point));
+              float lambertian =
+                  std::fmaxf(0.0f, DirectX::XMVectorGetX(DirectX::XMVector3Dot(
+                                       xm_surface_normal, xm_light_direction)));
+              lambertian = std::clamp(lambertian, 0.2f, 1.0f);
+
+              // Apply Lambertian shading to the color.
+              color = {1.0f - result->x - result->y, result->x, result->y};
+              color.x *= lambertian;
+              color.y *= lambertian;
+              color.z *= lambertian;
+
+              closest_distance = result->z;
+            }  // if (intersection)
+          }    // for-each face (triangle).
+        }      // for-each mesh.
 
         current_view.At(y, x) =
             utils::win32::CreateHighColor(static_cast<uint8_t>(color.x * 255),
                                           static_cast<uint8_t>(color.y * 255),
                                           static_cast<uint8_t>(color.z * 255));
-      }
-    }
+      }  // for x
+    }    // for y
 
     HDC device_context = GetDC(window);
     StretchDIBits(device_context, 0, 0, kDoubleWidth, kDoubleHeight, 0, 0,
-                  current_view.Columns(), current_view.Rows(),
+                  static_cast<INT>(current_view.Columns()),
+                  static_cast<INT>(current_view.Rows()),
                   current_view.Elements().data(), &bmi, DIB_RGB_COLORS,
                   SRCCOPY);
     ReleaseDC(window, device_context);
