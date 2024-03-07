@@ -8,9 +8,9 @@ void utils::xm::triangle::Load(DirectX::XMVECTOR& out_a,
                                DirectX::XMVECTOR& out_c,
                                std::span<const DirectX::XMFLOAT3A> vertices,
                                DirectX::XMINT3 face) {
-  out_a = DirectX::XMLoadFloat3A(&vertices[face.x]);
-  out_b = DirectX::XMLoadFloat3A(&vertices[face.y]);
-  out_c = DirectX::XMLoadFloat3A(&vertices[face.z]);
+  out_a = DirectX::XMLoadFloat3A(&vertices[static_cast<uint32_t>(face.x)]);
+  out_b = DirectX::XMLoadFloat3A(&vertices[static_cast<uint32_t>(face.y)]);
+  out_c = DirectX::XMLoadFloat3A(&vertices[static_cast<uint32_t>(face.z)]);
 }
 
 std::optional<DirectX::XMFLOAT3A> utils::xm::triangle::Intersect(

@@ -5,9 +5,10 @@
 #include <execution>
 
 namespace utils::win32 {
-constexpr UINT16 CreateHighColor(UINT8 red, UINT8 green, UINT8 blue) {
+constexpr UINT16 CreateHighColor(UINT red, UINT green, UINT blue) {
   static_assert(std::endian::native == std::endian::little);
-  return ((red >> 3U) << 10U) | ((green >> 3U) << 5U) | (blue >> 3U);
+  return static_cast<UINT16>(((red >> 3U) << 10U) | ((green >> 3U) << 5U) |
+                             (blue >> 3U));
 }
 
 bool IsKeyPressed(INT key);

@@ -6,7 +6,7 @@
 
 class FpsCamera {
  public:
-  inline FpsCamera() : position(0.0f, 0.0f, 0.0f), pitch(0.0f), yaw(0.0f) {}
+  inline FpsCamera() : position(0.0f, 0.0f, 0.0f), pitch_(0.0f), yaw_(0.0f) {}
 
   inline void Move(float delta_forward, float delta_right) {
     DirectX::XMFLOAT3A move_direction{};
@@ -21,9 +21,9 @@ class FpsCamera {
   }
 
   inline void Rotate(float delta_pitch, float delta_yaw) {
-    pitch += delta_pitch;
-    yaw = fmodf(yaw + delta_yaw, 360.0f);
-    pitch = std::fmaxf(-89.0f, std::fminf(89.0f, pitch));
+    pitch_ += delta_pitch;
+    yaw_ = fmodf(yaw_ + delta_yaw, 360.0f);
+    pitch_ = std::fmaxf(-89.0f, std::fminf(89.0f, pitch_));
   }
 
   inline DirectX::XMMATRIX GetWorldToCameraMatrix() const {
@@ -37,15 +37,17 @@ class FpsCamera {
 
  private:
   DirectX::XMFLOAT3A position;
-  float pitch;
-  float yaw;
+  float pitch_;
+  float yaw_;
+  float roll_{};
+  float dummy_{};
 
   inline DirectX::XMVECTOR GetForwardVector() const {
     const auto minus_unit_z = DirectX::XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f);
     return DirectX::XMVector3Normalize(DirectX::XMVector3Rotate(
         minus_unit_z, DirectX::XMQuaternionRotationRollPitchYaw(
-                          DirectX::XMConvertToRadians(pitch),
-                          DirectX::XMConvertToRadians(yaw), 0.0f)));
+                          DirectX::XMConvertToRadians(pitch_),
+                          DirectX::XMConvertToRadians(yaw_), 0.0f)));
   }
 
   inline DirectX::XMVECTOR GetRightVector() const {

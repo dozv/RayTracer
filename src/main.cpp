@@ -108,8 +108,8 @@ int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance,
     }
 
     // Get keyboard input.
-    for (auto i = 0; i < key_states.size(); ++i) {
-      key_states[i] = utils::win32::IsKeyPressed(i);
+    for (auto i = 0U; i < key_states.size(); ++i) {
+      key_states[i] = utils::win32::IsKeyPressed(static_cast<INT>(i));
     }
 
     // Update.
@@ -153,8 +153,8 @@ int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance,
     // Render.
     auto& current_view = (page ^= 1) ? front_buffer : back_buffer;
 
-    for (int y = 0; y < kHeight; ++y) {
-      for (int x = 0; x < kWidth; ++x) {
+    for (auto y = 0U; y < kHeight; ++y) {
+      for (auto x = 0U; x < kWidth; ++x) {
         const float ndc_x = RemapRange(static_cast<float>(x) + 0.5f, 0.0f,
                                        static_cast<float>(kWidth), -1.0f, 1.0f);
         const float ndc_y =

@@ -90,7 +90,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
-      <WarningLevel>Level4</WarningLevel>
+      <WarningLevel>EnableAllWarnings</WarningLevel>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
@@ -102,7 +102,7 @@
       <TreatAngleIncludeAsExternal>true</TreatAngleIncludeAsExternal>
       <TreatWarningAsError>true</TreatWarningAsError>
       <FloatingPointExceptions>false</FloatingPointExceptions>
-      <AdditionalOptions>/wd4530 /wd4324 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/wd4530 /wd4324 /wd4577  /wd4668 /wd4514 /wd5045 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -137,7 +137,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <WarningLevel>Level4</WarningLevel>
+      <WarningLevel>EnableAllWarnings</WarningLevel>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
@@ -149,7 +149,7 @@
       <TreatAngleIncludeAsExternal>true</TreatAngleIncludeAsExternal>
       <TreatWarningAsError>true</TreatWarningAsError>
       <FloatingPointExceptions>false</FloatingPointExceptions>
-      <AdditionalOptions>/wd4530 /wd4324 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/wd4530 /wd4324 /wd4577  /wd4668 /wd4514 /wd5045 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
