@@ -35,6 +35,7 @@
     <None Include=".clang-tidy" />
     <None Include=".clang-format" />
     <None Include=".editorconfig" />
+    <None Include="readme.md" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\utils\win32.h">

@@ -193,6 +193,7 @@
     <None Include=".clang-format" />
     <None Include=".clang-tidy" />
     <None Include=".editorconfig" />
+    <None Include="readme.md" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\fps_camera.h" />
