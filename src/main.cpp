@@ -70,7 +70,7 @@ int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance,
       [&](auto vertex) {
         return utils::xm::float3a::Transform(
             vertex, DirectX::XMMatrixRotationRollPitchYaw(0.0f, 0.2f, 0.0f) *
-                        DirectX::XMMatrixScaling(2.0f, 2.0f, 2.0f) *
+                        DirectX::XMMatrixScaling(3.0f, 3.0f, 3.0f) *
                         DirectX::XMMatrixTranslation(0.0f, -2.0f, -16.0f));
       },
       meshes[2].first, meshes[2].first);
@@ -82,8 +82,8 @@ int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance,
   LONGLONG simulation_time = 0;
   std::bitset<256> key_states{};
   auto fps_camera = FpsCamera();
-  DirectX::XMVECTOR xm_light_position =
-      DirectX::XMVectorSet(2.0f, 10.0f, -1.0f, 0.0f);
+  DirectX::XMVECTOR light_position =
+      DirectX::XMVectorSet(0.0f, 0.0f, 4.0f, 0.0f);
 
   while (running) {
     const auto real_time = utils::win32::GetMilliseconds();
@@ -171,45 +171,97 @@ int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance,
         DirectX::XMVECTOR xm_world_target = DirectX::XMVector3Transform(
             DirectX::XMVectorSet(camera_x, camera_y, -1.0f, 0.0f),
             camera_to_world_matrix);
-        auto xm_world_direction = DirectX::XMVector3Normalize(
-            DirectX::XMVectorSubtract(xm_world_target, xm_world_origin));
+        auto xm_world_direction =
+            utils::xm::ray::GetNormalizedDirectionFromPoints(xm_world_origin,
+                                                             xm_world_target);
 
         float closest_distance = std::numeric_limits<float>::infinity();
-        DirectX::XMFLOAT3A color = {0.0f, 0.0f, 0.0f};
+        DirectX::XMFLOAT3A color = {0.5f, 0.25f, 0.125f};
 
-        for (auto& mesh : meshes) {
-          for (auto& face : mesh.second) {
-            DirectX::XMVECTOR xm_a, xm_b, xm_c;
-            utils::xm::triangle::Load(xm_a, xm_b, xm_c, mesh.first, face);
+        for (auto mesh_index = 0U; mesh_index < meshes.size(); ++mesh_index) {
+          for (auto face_index = 0U;
+               face_index < meshes[mesh_index].second.size(); ++face_index) {
+            DirectX::XMVECTOR xm_a{};
+            DirectX::XMVECTOR xm_b{};
+            DirectX::XMVECTOR xm_c{};
+            utils::xm::triangle::Load(xm_a, xm_b, xm_c,
+                                      meshes[mesh_index].first,
+                                      meshes[mesh_index].second[face_index]);
 
             auto result = utils::xm::triangle::Intersect(
                 xm_a, xm_b, xm_c, xm_world_origin, xm_world_direction);
 
             if (result.has_value() && result->z > 1.0f &&
                 result->z < closest_distance) {
-              const auto intersection_point = utils::xm::ray::At(
+              const auto world_intersection = utils::xm::ray::At(
                   xm_world_origin, xm_world_direction, result->z);
 
-              // Calculate Lambertian shading.
-              DirectX::XMVECTOR xm_surface_normal = DirectX::XMVector3Normalize(
-                  utils::xm::triangle::GetSurfaceNormal(xm_a, xm_b, xm_c));
+              DirectX::XMVECTOR world_shadow_direction =
+                  utils::xm::ray::GetNormalizedDirectionFromPoints(
+                      world_intersection, light_position);
 
-              DirectX::XMVECTOR xm_light_direction =
-                  DirectX::XMVector3Normalize(DirectX::XMVectorSubtract(
-                      xm_light_position, intersection_point));
-              float lambertian =
-                  std::fmaxf(0.0f, DirectX::XMVectorGetX(DirectX::XMVector3Dot(
-                                       xm_surface_normal, xm_light_direction)));
-              lambertian = std::clamp(lambertian, 0.2f, 1.0f);
+              // Check for shadows.
+              bool in_shadow = false;
+              for (auto shadow_mesh_index = 0U;
+                   !in_shadow && shadow_mesh_index < meshes.size();
+                   ++shadow_mesh_index) {
+                for (auto shadow_face_index = 0U;
+                     !in_shadow && shadow_face_index <
+                                       meshes[shadow_mesh_index].second.size();
+                     ++shadow_face_index) {
+                  // Skip the current face or mesh.
+                  if (shadow_mesh_index == mesh_index ||
+                      shadow_face_index == face_index) {
+                    continue;
+                  }
 
-              // Apply Lambertian shading to the color.
-              color = {1.0f - result->x - result->y, result->x, result->y};
-              color.x *= lambertian;
-              color.y *= lambertian;
-              color.z *= lambertian;
+                  DirectX::XMVECTOR shadow_a{};
+                  DirectX::XMVECTOR shadow_b{};
+                  DirectX::XMVECTOR shadow_c{};
+                  utils::xm::triangle::Load(
+                      shadow_a, shadow_b, shadow_c,
+                      meshes[shadow_mesh_index].first,
+                      meshes[shadow_mesh_index].second[shadow_face_index]);
+
+                  auto offset_world_origin = DirectX::XMVectorAdd(
+                      world_intersection, DirectX::XMVectorReplicate(1E-4f));
+
+                  auto shadow_result = utils::xm::triangle::Intersect(
+                      shadow_a, shadow_b, shadow_c, offset_world_origin,
+                      world_shadow_direction);
+
+                  if (shadow_result.has_value() && shadow_result->z > 0.0f) {
+                    in_shadow = true;
+                    // Darken the color.
+                    color =
+                        utils::xm::float3a::Clamp(color, 0.00390625f, 0.0625f);
+                  }
+                }  // for-each shadow triangle.
+              }    // for-each shadow mesh.
+
+              // Shade using the Lambertian illumination model, if there is no
+              // shadow.
+              if (!in_shadow) {
+                DirectX::XMVECTOR xm_surface_normal =
+                    DirectX::XMVector3Normalize(
+                        utils::xm::triangle::GetSurfaceNormal(xm_a, xm_b,
+                                                              xm_c));
+
+                DirectX::XMVECTOR xm_light_direction =
+                    DirectX::XMVector3Normalize(DirectX::XMVectorSubtract(
+                        light_position, world_intersection));
+                float lambertian = std::fmaxf(
+                    0.0f, DirectX::XMVectorGetX(DirectX::XMVector3Dot(
+                              xm_surface_normal, xm_light_direction)));
+                lambertian = std::clamp(lambertian, 0.2f, 1.0f);
+                color = {1.0f - result->x - result->y, result->x, result->y};
+                color.x *= lambertian;
+                color.y *= lambertian;
+                color.z *= lambertian;
+              }
 
               closest_distance = result->z;
-            }  // if (intersection)
+            }  // if (intersection).
           }    // for-each face (triangle).
         }      // for-each mesh.
 
@@ -217,8 +269,8 @@ int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance,
             utils::win32::CreateHighColor(static_cast<uint8_t>(color.x * 255),
                                           static_cast<uint8_t>(color.y * 255),
                                           static_cast<uint8_t>(color.z * 255));
-      }  // for x
-    }    // for y
+      }  // for-each x.
+    }    // for-each y.
 
     HDC device_context = GetDC(window);
     StretchDIBits(device_context, 0, 0, kDoubleWidth, kDoubleHeight, 0, 0,

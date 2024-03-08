@@ -32,6 +32,9 @@ inline DirectX::XMFLOAT3A Transform(DirectX::XMFLOAT3A v,
                                     DirectX::FXMMATRIX xm_m) {
   return Store(DirectX::XMVector3Transform(Load(v), xm_m));
 }
+
+DirectX::XMFLOAT3A Clamp(DirectX::XMFLOAT3A v, float min_value,
+                         float max_value);
 }  // namespace float3a
 
 namespace vector3 {
@@ -70,6 +73,11 @@ inline DirectX::XMVECTOR At(DirectX::FXMVECTOR origin,
                             DirectX::FXMVECTOR direction, float t) {
   return DirectX::XMVectorMultiplyAdd(direction, DirectX::XMVectorReplicate(t),
                                       origin);
+}
+
+inline DirectX::XMVECTOR GetNormalizedDirectionFromPoints(
+    DirectX::FXMVECTOR o, DirectX::FXMVECTOR p) {
+  return DirectX::XMVector3Normalize(DirectX::XMVectorSubtract(p, o));
 }
 }  // namespace ray
 }  // namespace utils::xm

@@ -73,3 +73,12 @@ std::span<DirectX::XMFLOAT3A> utils::xm::ApplyTransform(
   std::ranges::transform(input, output_subspan.begin(), transform);
   return output_subspan;
 }
+
+DirectX::XMFLOAT3A utils::xm::float3a::Clamp(DirectX::XMFLOAT3A v,
+                                             float min_value, float max_value) {
+  DirectX::XMVECTOR xm_v = Load(v);
+  DirectX::XMVECTOR xm_min = DirectX::XMVectorReplicate(min_value);
+  DirectX::XMVECTOR xm_max = DirectX::XMVectorReplicate(max_value);
+  return Store(
+      DirectX::XMVectorMin(DirectX::XMVectorMax(xm_v, xm_min), xm_max));
+}
