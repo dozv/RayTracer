@@ -24,7 +24,7 @@ inline DirectX::XMFLOAT3A TraceRays(std::span<model::Mesh> meshes,
                                     bool& show_reflections) {
   // Trace camera rays.
   float closest_distance = std::numeric_limits<float>::infinity();
-  DirectX::XMFLOAT3A color = {0.5f, 0.25f, 0.125f};
+  DirectX::XMFLOAT3A color = {0.18f, 0.5f, 0.9f};
 
   for (auto mesh_index = 0U; mesh_index < meshes.size(); ++mesh_index) {
     for (auto face_index = 0U; face_index < meshes[mesh_index].second.size();
