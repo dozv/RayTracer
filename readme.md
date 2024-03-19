@@ -21,5 +21,6 @@ Premature optimizations are a waste of time anyway…
 Features:
 - Camera rays
 - Shadow rays
+- Reflection rays
 - Lambertian (diffuse) illumination model and shading
 - First-person camera controls (WASD, arrow keys)
