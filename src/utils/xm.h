@@ -57,6 +57,7 @@ void Load(DirectX::XMVECTOR& out_a, DirectX::XMVECTOR& out_b,
           DirectX::XMVECTOR& out_c,
           std::span<const DirectX::XMFLOAT3A> vertices, DirectX::XMINT3 face);
 
+// Returns `beta`, `gamma` and `t` (distance).
 std::optional<DirectX::XMFLOAT3A> Intersect(DirectX::FXMVECTOR a,
                                             DirectX::FXMVECTOR b,
                                             DirectX::FXMVECTOR c,

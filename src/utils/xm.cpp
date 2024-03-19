@@ -1,6 +1,7 @@
 #include "xm.h"
 
 #include <algorithm>
+#include <execution>
 #include <ranges>
 
 void utils::xm::triangle::Load(DirectX::XMVECTOR& out_a,
@@ -70,7 +71,8 @@ std::span<DirectX::XMFLOAT3A> utils::xm::ApplyTransform(
     std::span<DirectX::XMFLOAT3A> output,
     std::span<const DirectX::XMFLOAT3A> input) {
   auto output_subspan = output.subspan(0, input.size());
-  std::ranges::transform(input, output_subspan.begin(), transform);
+  std::transform(std::execution::par, input.begin(), input.end(),
+                 output_subspan.begin(), transform);
   return output_subspan;
 }
 

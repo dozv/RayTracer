@@ -35,6 +35,8 @@ class FpsCamera {
     return DirectX::XMMatrixInverse(nullptr, GetWorldToCameraMatrix());
   }
 
+  inline DirectX::XMFLOAT3A GetPosition() const { return position; }
+
  private:
   DirectX::XMFLOAT3A position;
   float pitch_;
