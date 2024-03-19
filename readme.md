@@ -11,12 +11,6 @@ Check if the shadow ray intersects with another object on the way to your light 
 If yes, darken the pixel; if not, continue.
 This was ray tracing in a nutshell for (non-technical) people.
 
-Technical stuff up ahead:
-
-The below ray tracer (currently) runs on a Core i3 without sophisticated optimizations
-or explicit parallelizations.
-
-Premature optimizations are a waste of time anyway…
 
 Features:
 - Camera rays
