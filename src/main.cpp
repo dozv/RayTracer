@@ -132,9 +132,8 @@ inline DirectX::XMFLOAT3A TraceRays(std::span<model::Mesh> meshes,
 
                       xm_world_direction, xm_surface_normal));
 
-              // Add a small offset to the origin of the reflected ray.
-              const auto offset = 1E-2f;  // Choose an appropriate value
-                                          // for your context.
+              const auto offset = 1E-2f;
+
               const auto xm_world_origin_offset = DirectX::XMVectorAdd(
                   world_intersection,
                   DirectX::XMVectorScale(reflection_direction, offset));
