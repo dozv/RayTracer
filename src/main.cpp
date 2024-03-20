@@ -24,7 +24,8 @@ inline DirectX::XMFLOAT3A TraceRays(std::span<model::Mesh> meshes,
                                     bool& show_reflections) {
   // Trace camera rays.
   float closest_distance = std::numeric_limits<float>::infinity();
-  DirectX::XMFLOAT3A color = {0.18f, 0.5f, 0.9f};
+  const auto ambient = DirectX::XMVectorReplicate(0.2f);
+  DirectX::XMFLOAT3A color = {0.5f, 0.5f, 0.5f};
 
   for (auto mesh_index = 0U; mesh_index < meshes.size(); ++mesh_index) {
     for (auto face_index = 0U; face_index < meshes[mesh_index].second.size();
@@ -46,6 +47,10 @@ inline DirectX::XMFLOAT3A TraceRays(std::span<model::Mesh> meshes,
         DirectX::XMVECTOR world_shadow_direction =
             utils::xm::ray::GetNormalizedDirectionFromPoints(world_intersection,
                                                              light_position);
+
+        DirectX::XMVECTOR barycentrics = DirectX::XMVectorSet(
+            1.0f - result->x - result->y, result->x, result->y, 1.0f);
+
         // Trace shadow rays.
         bool in_shadow = false;
         if (visible_shadows) {
@@ -97,14 +102,15 @@ inline DirectX::XMFLOAT3A TraceRays(std::span<model::Mesh> meshes,
           DirectX::XMVECTOR xm_light_direction = DirectX::XMVector3Normalize(
               DirectX::XMVectorSubtract(light_position, world_intersection));
 
-          float lambertian =
-              std::fmaxf(0.0f, DirectX::XMVectorGetX(DirectX::XMVector3Dot(
-                                   xm_surface_normal, xm_light_direction)));
-          lambertian = std::clamp(lambertian, 0.2f, 1.0f);
-          color = {(1.0f - result->x - result->y), result->x, result->y};
-          color.x *= lambertian;
-          color.y *= lambertian;
-          color.z *= lambertian;
+          float lambertian = DirectX::XMVectorGetX(
+              DirectX::XMVector3Dot(xm_surface_normal, xm_light_direction));
+
+          DirectX::XMVECTOR xm_lambertian =
+              DirectX::XMVectorReplicate(lambertian);
+
+          color = utils::xm::float3a::Store(
+              DirectX::XMVectorSaturate(DirectX::XMVectorMultiplyAdd(
+                  barycentrics, xm_lambertian, ambient)));
         }  // if (not in shadow).
 
         // Trace reflection rays.
@@ -128,12 +134,11 @@ inline DirectX::XMFLOAT3A TraceRays(std::span<model::Mesh> meshes,
                   meshes[reflection_mesh_index].first,
                   meshes[reflection_mesh_index].second[reflection_face_index]);
               const auto reflection_direction =
-                  DirectX::XMVector3Normalize(DirectX::XMVector3Reflect(
+                  DirectX::XMVector3NormalizeEst(DirectX::XMVector3Reflect(
 
                       xm_world_direction, xm_surface_normal));
 
               const auto offset = 1E-2f;
-
               const auto xm_world_origin_offset = DirectX::XMVectorAdd(
                   world_intersection,
                   DirectX::XMVectorScale(reflection_direction, offset));
@@ -147,18 +152,15 @@ inline DirectX::XMFLOAT3A TraceRays(std::span<model::Mesh> meshes,
                 // Calculate the color at the reflection intersection
                 // point.
                 DirectX::XMVECTOR reflection_color = DirectX::XMVectorSet(
-                    (1.0f - reflection_result->x - reflection_result->y),
-                    reflection_result->x, reflection_result->y, 0.0f);
-                constexpr float reflectivity = 0.95f;
+                    (1.0f - reflection_result->x - reflection_result->y) *
+                        color.x,
+                    reflection_result->x * color.y,
+                    reflection_result->y * color.z, 0.0f);
 
-                // Combine the original color and the reflection
-                // color.
-                color = utils::xm::float3a::Store(
-                    DirectX::XMVectorSaturate(DirectX::XMVectorAdd(
-                        DirectX::XMVectorScale(utils::xm::float3a::Load(color),
-                                               1.0f - reflectivity),
-                        DirectX::XMVectorScale(reflection_color,
-                                               reflectivity))));
+                constexpr float reflectivity = 0.95f;
+                color = utils::xm::float3a::Store(DirectX::XMVectorSaturate(
+                    DirectX::XMVectorLerp(utils::xm::float3a::Load(color),
+                                          reflection_color, reflectivity)));
               }
             }
           }
