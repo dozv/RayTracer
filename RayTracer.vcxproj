@@ -184,8 +184,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\common\matrix_view.h" />
+    <ClCompile Include="src\graphics\ray_tracer.cpp" />
     <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\model.cpp" />
+    <ClCompile Include="src\graphics\model.cpp" />
     <ClCompile Include="src\utils\win32.cpp" />
     <ClCompile Include="src\utils\xm.cpp" />
   </ItemGroup>
@@ -196,9 +197,10 @@
     <None Include="readme.md" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\fps_camera.h" />
+    <ClInclude Include="src\graphics\fps_camera.h" />
     <ClInclude Include="src\common\common.h" />
-    <ClInclude Include="src\model.h" />
+    <ClInclude Include="src\graphics\ray_tracer.h" />
+    <ClInclude Include="src\graphics\model.h" />
     <ClInclude Include="src\utils\win32.h" />
     <ClInclude Include="src\utils\xm.h" />
   </ItemGroup>
