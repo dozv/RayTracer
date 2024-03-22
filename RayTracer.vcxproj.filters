@@ -27,7 +27,10 @@
     <ClCompile Include="src\utils\xm.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\model.cpp">
+    <ClCompile Include="src\graphics\model.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\graphics\ray_tracer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -47,10 +50,13 @@
     <ClInclude Include="src\common\common.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\fps_camera.h">
+    <ClInclude Include="src\graphics\fps_camera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\model.h">
+    <ClInclude Include="src\graphics\model.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphics\ray_tracer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
