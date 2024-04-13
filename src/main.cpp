@@ -201,7 +201,9 @@ int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance,
         meshes[2].first, meshes[2].first);
 
     // Render.
-    auto& current_view = (page ^= 1) ? front_buffer : back_buffer;
+    page ^= 1;
+    auto& current_view = page ? front_buffer : back_buffer;
+    auto& display_view = page ? back_buffer : front_buffer;
 
     std::span<DirectX::XMUINT2> pixel_span(pixels);
 
@@ -241,11 +243,12 @@ int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance,
               static_cast<uint8_t>(color.z * 255));
         });
 
+    // Render to window.
     HDC device_context = GetDC(window);
     StretchDIBits(device_context, 0, 0, kDoubleWidth, kDoubleHeight, 0, 0,
-                  static_cast<INT>(current_view.Columns()),
-                  static_cast<INT>(current_view.Rows()),
-                  current_view.Elements().data(), &bmi, DIB_RGB_COLORS,
+                  static_cast<INT>(display_view.Columns()),
+                  static_cast<INT>(display_view.Rows()),
+                  display_view.Elements().data(), &bmi, DIB_RGB_COLORS,
                   SRCCOPY);
     ReleaseDC(window, device_context);
 
