@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <bitset>
 #include <cmath>
+#include <numbers>
 #include <optional>
 #include <vector>
 
@@ -17,6 +18,42 @@
 #include "utils/win32.h"
 #include "utils/xm.h"
 
+namespace {
+inline void CreateCameraRay(DirectX::XMVECTOR& out_origin,
+                            DirectX::XMVECTOR& out_direction, int x, int y,
+                            int width, int height,
+                            const DirectX::XMMATRIX& camera_to_world_matrix) {
+  // Calculate half of the horizontal field of view angle (in radians).
+  const float fov_horizontal = std::numbers::pi_v<float> / 2.0f;
+  const float half_angle_tan = std::tan(fov_horizontal / 2.0f);
+
+  // Calculate the inverse aspect ratio.
+  const float aspect_ratio =
+      static_cast<float>(width) / static_cast<float>(height);
+  const float inverse_aspect_ratio = 1.0f / aspect_ratio;
+
+  const float ndc_x =
+      std::lerp(-1.0f, 1.0f, (static_cast<float>(x) + 0.5f) / width);
+  const float ndc_y =
+      std::lerp(1.0f, -1.0f, (static_cast<float>(y) + 0.5f) / height);
+
+  const float camera_x = half_angle_tan * ndc_x;
+  const float camera_y = inverse_aspect_ratio * half_angle_tan * ndc_y;
+
+  const DirectX::XMVECTOR camera_ndc =
+      DirectX::XMVectorSet(camera_x, camera_y, -1.0f, 0.0f);
+
+  const DirectX::XMVECTOR xm_world_origin =
+      DirectX::XMVector3Transform(DirectX::g_XMZero, camera_to_world_matrix);
+  const DirectX::XMVECTOR xm_world_target =
+      DirectX::XMVector3Transform(camera_ndc, camera_to_world_matrix);
+
+  out_origin = xm_world_origin;
+  out_direction = DirectX::XMVector3Normalize(
+      DirectX::XMVectorSubtract(xm_world_target, xm_world_origin));
+}
+}  // namespace
+
 int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance,
                     _In_ PWSTR cmd_line, _In_ int cmd_show) {
   UNREFERENCED_PARAMETER(cmd_line);
@@ -24,11 +61,7 @@ int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance,
   UNREFERENCED_PARAMETER(prev_instance);
   constexpr auto kWidth = 320;
   constexpr auto kHeight = 240;
-  constexpr auto kAspectRatio =
-      static_cast<float>(kWidth) / static_cast<float>(kHeight);
-  constexpr auto kInverseAspectRatio = 1.0f / kAspectRatio;
-  constexpr auto kFov = DirectX::XMConvertToRadians(90.0f);
-  const auto kHalfAngleTan = tan(kFov / 2.0f);
+
   constexpr auto kDoubleWidth = kWidth * 2;
   constexpr auto kDoubleHeight = kHeight * 2;
   HWND window =
@@ -90,10 +123,10 @@ int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance,
   constexpr auto kSimulationTimeStep = 1000 / kFps;
   LONGLONG simulation_time = 0;
   std::bitset<256> key_states{};
-  std::bitset<256> prev_key_states;
+  std::bitset<256> prev_key_states{};
   auto fps_camera = FpsCamera();
   DirectX::XMVECTOR light_position =
-      DirectX::XMVectorSet(0.0f, 10.0f, 8.0f, 0.0f);
+      DirectX::XMVectorSet(0.0f, 0.0f, 0.1f, 0.0f);
 
   bool visible_shadows = false;
   bool show_reflections = false;
@@ -181,30 +214,14 @@ int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance,
           const auto x = p.x;
           const auto y = p.y;
 
-          const float ndc_x =
-              RemapRange(static_cast<float>(x) + 0.5f, 0.0f,
-                         static_cast<float>(kWidth), -1.0f, 1.0f);
-          const float ndc_y =
-              RemapRange(static_cast<float>(y) + 0.5f,
-                         static_cast<float>(kHeight), 0.0f, -1.0f, 1.0f);
+          DirectX::XMVECTOR origin = {};
+          DirectX::XMVECTOR direction = {};
+          CreateCameraRay(origin, direction, x, y, kWidth, kHeight,
+                          camera_to_world_matrix);
 
-          const float camera_x = kHalfAngleTan * ndc_x;
-          const float camera_y = kInverseAspectRatio * kHalfAngleTan * ndc_y;
-
-          DirectX::XMVECTOR xm_camera_origin = DirectX::g_XMZero;
-          DirectX::XMVECTOR xm_camera_target = DirectX::g_XMZero;
-          DirectX::XMVECTOR xm_world_origin = DirectX::XMVector3Transform(
-              xm_camera_origin, camera_to_world_matrix);
-          DirectX::XMVECTOR xm_world_target = DirectX::XMVector3Transform(
-              DirectX::XMVectorSet(camera_x, camera_y, -1.0f, 0.0f),
-              camera_to_world_matrix);
-          const auto xm_world_direction =
-              utils::xm::ray::GetNormalizedDirectionFromPoints(xm_world_origin,
-                                                               xm_world_target);
-
-          const auto color = ray_tracer::TraceRays(
-              visible_shadows, show_reflections, meshes, xm_world_direction,
-              xm_world_origin, light_position);
+          const auto color =
+              ray_tracer::TraceRays(visible_shadows, show_reflections, meshes,
+                                    direction, origin, light_position);
 
           current_view.At(y, x) = utils::win32::CreateHighColor(
               static_cast<uint8_t>(color.x * 255),
