@@ -11,6 +11,7 @@
 
 #include "common/common.h"
 #include "graphics/fps_camera.h"
+#include "graphics/mesh_view.h"
 #include "graphics/model.h"
 #include "graphics/ray_tracer.h"
 #include "utils/win32.h"
@@ -46,6 +47,13 @@ int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance,
   bmi.bmiHeader.biBitCount = 16;
   bmi.bmiHeader.biClrUsed = BI_RGB;
 
+  std::vector<DirectX::XMUINT2> pixels(kWidth * kHeight);
+  for (auto y = 0U; y < kHeight; ++y) {
+    for (auto x = 0U; x < kWidth; ++x) {
+      pixels[y * kWidth + x] = {x, y};
+    }
+  }
+
   std::vector<
       std::pair<std::vector<DirectX::XMFLOAT3A>, std::vector<DirectX::XMINT3>>>
       meshes{};
@@ -56,63 +64,25 @@ int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance,
   meshes.push_back(model::LoadRectangle());
   meshes.push_back(model::LoadRectangle());
 
-  std::vector<DirectX::XMUINT2> pixels(kWidth * kHeight);
-  for (auto y = 0U; y < kHeight; ++y) {
-    for (auto x = 0U; x < kWidth; ++x) {
-      pixels[y * kWidth + x] = {x, y};
-    }
-  }
+  auto cube_1 = graphics::MeshView(meshes[0].first, meshes[0].second);
+  auto cube_2 = graphics::MeshView(meshes[1].first, meshes[1].second);
+  auto cube_3 = graphics::MeshView(meshes[2].first, meshes[2].second);
+  auto octahedron = graphics::MeshView(meshes[3].first, meshes[3].second);
+  auto rectangle_1 = graphics::MeshView(meshes[4].first, meshes[4].second);
+  auto rectangle_2 = graphics::MeshView(meshes[5].first, meshes[5].second);
 
-  utils::xm::ApplyTransform(
-      [&](auto vertex) {
-        return utils::xm::float3a::Transform(
-            vertex, DirectX::XMMatrixTranslation(0.0f, 0.0f, -4.0f));
-      },
-      meshes[0].first, meshes[0].first);
-
-  utils::xm::ApplyTransform(
-      [&](auto vertex) {
-        return utils::xm::float3a::Transform(
-            vertex, DirectX::XMMatrixTranslation(0.0f, 2.0f, -8.0f));
-      },
-      meshes[1].first, meshes[1].first);
-
-  utils::xm::ApplyTransform(
-      [&](auto vertex) {
-        return utils::xm::float3a::Transform(
-            vertex, DirectX::XMMatrixRotationRollPitchYaw(0.0f, 0.2f, 0.0f) *
-                        DirectX::XMMatrixScaling(3.0f, 3.0f, 3.0f) *
-                        DirectX::XMMatrixTranslation(0.0f, -2.0f, -16.0f));
-      },
-      meshes[2].first, meshes[2].first);
-
-  utils::xm::ApplyTransform(
-      [&](auto vertex) {
-        return utils::xm::float3a::Transform(
-            vertex, DirectX::XMMatrixRotationRollPitchYaw(0.2f, 0.2f, 0.1f) *
-                        DirectX::XMMatrixScaling(1.0f, 1.0f, 1.0f) *
-                        DirectX::XMMatrixTranslation(0.0f, 2.0f, -32.0f));
-      },
-      meshes[3].first, meshes[3].first);
-
-  utils::xm::ApplyTransform(
-      [&](auto vertex) {
-        return utils::xm::float3a::Transform(
-            vertex,
-            DirectX::XMMatrixRotationRollPitchYaw(3.14 / 2.0f, 0.0f, 0.0f) *
-                DirectX::XMMatrixScaling(256.0f, 1.0f, 256.0f) *
-                DirectX::XMMatrixTranslation(0.0f, -8.0f, -2.0f));
-      },
-      meshes[4].first, meshes[4].first);
-
-  utils::xm::ApplyTransform(
-      [&](auto vertex) {
-        return utils::xm::float3a::Transform(
-            vertex, DirectX::XMMatrixRotationRollPitchYaw(0.0f, 0.0f, 0.0f) *
-                        DirectX::XMMatrixScaling(256.0f, 256.0f, 1.0f) *
-                        DirectX::XMMatrixTranslation(0.0f, 120.0f, -130.0f));
-      },
-      meshes[5].first, meshes[5].first);
+  cube_1.Translate(0.0f, 0.0f, -4.0f);
+  cube_2.Translate(0.0f, 2.0f, -8.0f);
+  cube_3.Rotate(0.0f, 0.2f, 0.0f)
+      .Scale(3.0f, 3.0f, 3.0f)
+      .Translate(0.0f, -2.0f, -16.0f);
+  octahedron.Rotate(0.2f, 0.2f, 0.1f)
+      .Scale(1.0f, 1.0f, 1.0f)
+      .Translate(0.0f, 2.0f, -32.0f);
+  rectangle_1.Rotate(3.14f / 2.0f, 0.0f, 0.0f)
+      .Scale(256.0f, 1.0f, 256.0f)
+      .Translate(0.0f, -8.0f, -2.0f);
+  rectangle_2.Scale(256.0f, 256.0f, 1.0f).Translate(0.0f, 120.0f, -130.0f);
 
   constexpr auto kFps = 30;
   bool running = true;
@@ -197,12 +167,7 @@ int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance,
 
     auto camera_to_world_matrix = fps_camera.GetCameraToWorldMatrix();
 
-    utils::xm::ApplyTransform(
-        [&](auto vertex) {
-          return utils::xm::float3a::Transform(
-              vertex, DirectX::XMMatrixRotationRollPitchYaw(0.0f, 0.2f, 0.0f));
-        },
-        meshes[2].first, meshes[2].first);
+    cube_3.Rotate(0.0f, 0.2f, 0.0f);
 
     // Render.
     page ^= 1;
