@@ -120,6 +120,7 @@ int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance,
   constexpr auto kSimulationTimeStep = 1000 / kFps;
   LONGLONG simulation_time = 0;
   std::bitset<256> key_states{};
+  std::bitset<256> prev_key_states;
   auto fps_camera = FpsCamera();
   DirectX::XMVECTOR light_position =
       DirectX::XMVectorSet(0.0f, 10.0f, 8.0f, 0.0f);
@@ -154,13 +155,16 @@ int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance,
       key_states[i] = utils::win32::IsKeyPressed(static_cast<INT>(i));
     }
 
-    if (key_states[VK_F1]) {
+    if (key_states[VK_F1] && !prev_key_states[VK_F1]) {
       visible_shadows = !visible_shadows;
     }
 
-    if (key_states[VK_F2]) {
+    if (key_states[VK_F2] && !prev_key_states[VK_F2]) {
       show_reflections = !show_reflections;
     }
+
+    // Update previous key states.
+    prev_key_states = key_states;
 
     // Update.
     while (simulation_time < real_time) {
