@@ -1,4 +1,4 @@
-#include "model.h"
+#include "mesh.h"
 
 #include <algorithm>
 #include <cmath>
@@ -7,8 +7,7 @@
 #include <utility>
 #include <vector>
 
-std::pair<std::vector<DirectX::XMFLOAT3A>, std::vector<DirectX::XMINT3>>
-model::LoadCube() {
+scene::Mesh scene::LoadCube() {
   std::vector<DirectX::XMFLOAT3A> vertices = {
       {1.000000f, -1.000000f, -1.000000f}, {1.000000f, -1.000000f, 1.000000f},
       {-1.000000f, -1.000000f, 1.000000f}, {-1.000000f, -1.000000f, -1.000000f},
@@ -24,8 +23,7 @@ model::LoadCube() {
   return {vertices, indices};
 }
 
-std::pair<std::vector<DirectX::XMFLOAT3A>, std::vector<DirectX::XMINT3>>
-model::LoadOctahedron() {
+scene::Mesh scene::LoadOctahedron() {
   std::vector<DirectX::XMFLOAT3A> vertices = {
       {1.000000f, 0.000000f, 0.000000f},  {-1.000000f, 0.000000f, 0.000000f},
       {0.000000f, 0.000000f, -1.000000f}, {0.000000f, 0.000000f, 1.000000f},
@@ -39,8 +37,7 @@ model::LoadOctahedron() {
   return {vertices, indices};
 }
 
-std::pair<std::vector<DirectX::XMFLOAT3A>, std::vector<DirectX::XMINT3>>
-model::LoadRectangle() {
+scene::Mesh scene::LoadRectangle() {
   std::vector<DirectX::XMFLOAT3A> vertices = {{-0.5f, -0.5f, 0.0f},
                                               {0.5f, -0.5f, 0.0f},
                                               {0.5f, 0.5f, 0.0f},

@@ -8,12 +8,13 @@
 #include <cmath>
 #include <numbers>
 #include <optional>
+#include <utility>
 #include <vector>
 
-#include "common/common.h"
-#include "graphics/model.h"
+#include "common/matrix_view.h"
 #include "graphics/ray_tracer.h"
 #include "scene/fps_camera.h"
+#include "scene/mesh.h"
 #include "scene/mesh_view.h"
 #include "utils/win32.h"
 #include "utils/xm.h"
@@ -90,12 +91,12 @@ int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance,
   std::vector<
       std::pair<std::vector<DirectX::XMFLOAT3A>, std::vector<DirectX::XMINT3>>>
       meshes{};
-  meshes.push_back(model::LoadCube());
-  meshes.push_back(model::LoadCube());
-  meshes.push_back(model::LoadCube());
-  meshes.push_back(model::LoadOctahedron());
-  meshes.push_back(model::LoadRectangle());
-  meshes.push_back(model::LoadRectangle());
+  meshes.push_back(scene::LoadCube());
+  meshes.push_back(scene::LoadCube());
+  meshes.push_back(scene::LoadCube());
+  meshes.push_back(scene::LoadOctahedron());
+  meshes.push_back(scene::LoadRectangle());
+  meshes.push_back(scene::LoadRectangle());
 
   auto cube_1 = scene::MeshView(meshes[0].first, meshes[0].second);
   auto cube_2 = scene::MeshView(meshes[1].first, meshes[1].second);

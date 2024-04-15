@@ -11,7 +11,7 @@ inline float CalculateDistance(DirectX::FXMVECTOR a, DirectX::FXMVECTOR b) {
 }
 
 // Check if the ray from intersection point to light intersects with any mesh.
-inline bool IntersectsWithShadow(const std::span<model::Mesh>& meshes,
+inline bool IntersectsWithShadow(const std::span<scene::Mesh>& meshes,
                                  size_t mesh_index, size_t face_index,
                                  DirectX::FXMVECTOR intersection_point,
                                  const DirectX::XMFLOAT3A& light_position) {
@@ -37,7 +37,7 @@ inline bool IntersectsWithShadow(const std::span<model::Mesh>& meshes,
 
 // Check if a point is shadowed by geometry in the scene.
 inline bool IsShadowed(DirectX::XMVECTOR& final_color,
-                       const std::span<model::Mesh>& meshes,
+                       const std::span<scene::Mesh>& meshes,
                        size_t outer_mesh_index, size_t outer_face_index,
                        DirectX::FXMVECTOR intersection_point,
                        const DirectX::XMFLOAT3A& light_position) {
@@ -83,7 +83,7 @@ inline bool IsShadowed(DirectX::XMVECTOR& final_color,
 // Check if the ray from intersection point to reflection intersects with any
 // mesh.
 inline bool IntersectsWithReflection(DirectX::XMVECTOR& final_color,
-                                     const std::span<model::Mesh>& meshes,
+                                     const std::span<scene::Mesh>& meshes,
                                      size_t mesh_index, size_t face_index,
                                      DirectX::FXMVECTOR intersection_point,
                                      DirectX::FXMVECTOR incident_direction,
@@ -126,7 +126,7 @@ inline bool IntersectsWithReflection(DirectX::XMVECTOR& final_color,
 
 // Trace the reflection ray and calculate reflection color.
 inline void TraceReflectionRay(DirectX::XMVECTOR& final_color,
-                               const std::span<model::Mesh>& meshes,
+                               const std::span<scene::Mesh>& meshes,
                                size_t outer_mesh_index, size_t outer_face_index,
                                DirectX::FXMVECTOR intersection_point,
                                DirectX::FXMVECTOR incident_direction,
@@ -168,7 +168,7 @@ inline float CalculateLambertian(DirectX::FXMVECTOR surface_normal,
 
 DirectX::XMVECTOR ray_tracer::TraceRays(
     ShadowVisibility shadow_visibility,
-    ReflectionVisibility reflection_visibility, std::span<model::Mesh> meshes,
+    ReflectionVisibility reflection_visibility, std::span<scene::Mesh> meshes,
     DirectX::FXMVECTOR world_direction, DirectX::FXMVECTOR world_origin,
     std::span<const DirectX::XMFLOAT3A> light_positions) {
   float closest_distance = std::numeric_limits<float>::infinity();

@@ -186,7 +186,7 @@
     <ClCompile Include="src\common\matrix_view.h" />
     <ClCompile Include="src\graphics\ray_tracer.cpp" />
     <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\graphics\model.cpp" />
+    <ClCompile Include="src\scene\mesh.cpp" />
     <ClCompile Include="src\utils\win32.cpp" />
     <ClCompile Include="src\utils\xm.cpp" />
   </ItemGroup>
@@ -198,9 +198,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\scene\fps_camera.h" />
-    <ClInclude Include="src\common\common.h" />
     <ClInclude Include="src\graphics\ray_tracer.h" />
-    <ClInclude Include="src\graphics\model.h" />
+    <ClInclude Include="src\scene\mesh.h" />
     <ClInclude Include="src\scene\mesh_view.h" />
     <ClInclude Include="src\utils\win32.h" />
     <ClInclude Include="src\utils\xm.h" />
