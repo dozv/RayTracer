@@ -15,31 +15,25 @@ struct MeshParams {
   unsigned int current_face_index;
 };
 
-inline bool TraceShadowRays(DirectX::XMFLOAT3A& color, const MeshParams& params,
+inline bool TraceShadowRays(DirectX::XMVECTOR& color, const MeshParams& params,
                             DirectX::FXMVECTOR world_intersection,
                             DirectX::FXMVECTOR world_shadow_direction,
                             DirectX::FXMVECTOR light_position) {
-  bool in_shadow = {};
+  bool in_shadow = false;
 
-  for (auto shadow_mesh_index = 0U;
-       !in_shadow && shadow_mesh_index < params.meshes.size();
-       ++shadow_mesh_index) {
-    if (shadow_mesh_index == params.current_mesh_index)
-      continue;  // Skip the current mesh.
+  for (const auto& mesh : params.meshes) {
+    if (&mesh == &params.meshes[params.current_mesh_index]) continue;
 
-    for (auto shadow_face_index = 0U;
-         !in_shadow &&
-         shadow_face_index < params.meshes[shadow_mesh_index].second.size();
-         ++shadow_face_index) {
-      if (shadow_face_index == params.current_face_index)
-        continue;  // Skip the current face.
+    for (const auto& face : mesh.second) {
+      if (&face == &params.meshes[params.current_mesh_index]
+                        .second[params.current_face_index])
+        continue;
 
       DirectX::XMVECTOR shadow_a{};
       DirectX::XMVECTOR shadow_b{};
       DirectX::XMVECTOR shadow_c{};
-      utils::xm::triangle::Load(
-          shadow_a, shadow_b, shadow_c, params.meshes[shadow_mesh_index].first,
-          params.meshes[shadow_mesh_index].second[shadow_face_index]);
+
+      utils::xm::triangle::Load(shadow_a, shadow_b, shadow_c, mesh.first, face);
       const auto offset_world_origin =
           DirectX::XMVectorAdd(world_intersection, DirectX::g_XMEpsilon);
       const auto shadow_result = utils::xm::triangle::Intersect(
@@ -50,15 +44,18 @@ inline bool TraceShadowRays(DirectX::XMFLOAT3A& color, const MeshParams& params,
           shadow_result->z <
               CalculateDistance(light_position, world_intersection)) {
         in_shadow = true;
-        color = {};
+        color = DirectX::XMVectorReplicate(0.0625f);  // Hint: no alpha channel.
+        break;
       }
     }
+
+    if (in_shadow) break;
   }
 
   return in_shadow;
 }
 
-inline void TraceReflectionRays(DirectX::XMFLOAT3A& color,
+inline void TraceReflectionRays(DirectX::XMVECTOR& color,
                                 const MeshParams& params,
                                 DirectX::FXMVECTOR world_intersection,
                                 DirectX::FXMVECTOR xm_world_direction,
@@ -94,30 +91,30 @@ inline void TraceReflectionRays(DirectX::XMFLOAT3A& color,
       if (reflection_result.has_value() && reflection_result->z > 0.0f) {
         // Calculate the color at the reflection intersection
         // point.
-        const auto reflection_color = DirectX::XMVectorSet(
-            (1.0f - reflection_result->x - reflection_result->y) * color.x,
-            reflection_result->x * color.y, reflection_result->y * color.z,
-            0.0f);
+        const auto bc = DirectX::XMVectorSet(
+            1.0f - reflection_result->x - reflection_result->y,
+            reflection_result->x, reflection_result->y, 0.0f);
+
+        const auto reflection_color = DirectX::XMVectorMultiply(bc, color);
 
         constexpr float reflectivity = 0.95f;
-        color = utils::xm::float3a::Store(DirectX::XMVectorSaturate(
-            DirectX::XMVectorLerp(utils::xm::float3a::Load(color),
-                                  reflection_color, reflectivity)));
+        color = DirectX::XMVectorSaturate(
+            DirectX::XMVectorLerp(color, reflection_color, reflectivity));
       }
     }
   }
 }
 }  // namespace
 
-DirectX::XMFLOAT3A ray_tracer::TraceRays(bool& visible_shadows,
-                                         bool& show_reflections,
-                                         std::span<model::Mesh> meshes,
-                                         DirectX::FXMVECTOR xm_world_direction,
-                                         DirectX::FXMVECTOR xm_world_origin,
-                                         DirectX::FXMVECTOR light_position) {
+DirectX::XMVECTOR ray_tracer::TraceRays(bool& visible_shadows,
+                                        bool& show_reflections,
+                                        std::span<model::Mesh> meshes,
+                                        DirectX::FXMVECTOR xm_world_direction,
+                                        DirectX::FXMVECTOR xm_world_origin,
+                                        DirectX::FXMVECTOR light_position) {
   float closest_distance = std::numeric_limits<float>::infinity();
   const auto ambient = DirectX::XMVectorReplicate(0.2f);
-  DirectX::XMFLOAT3A color = {1.0f, 1.0f, 1.0f};
+  DirectX::XMVECTOR color = DirectX::g_XMOne;
 
   for (auto mesh_index = 0U; mesh_index < meshes.size(); ++mesh_index) {
     for (auto face_index = 0U; face_index < meshes[mesh_index].second.size();
@@ -166,9 +163,8 @@ DirectX::XMFLOAT3A ray_tracer::TraceRays(bool& visible_shadows,
           DirectX::XMVECTOR xm_lambertian =
               DirectX::XMVectorReplicate(lambertian * 0.8f);
 
-          color = utils::xm::float3a::Store(
-              DirectX::XMVectorSaturate(DirectX::XMVectorMultiplyAdd(
-                  barycentrics, xm_lambertian, ambient)));
+          color = DirectX::XMVectorSaturate(DirectX::XMVectorMultiplyAdd(
+              barycentrics, xm_lambertian, ambient));
         }  // if (not in shadow).
 
         // Trace reflection rays.

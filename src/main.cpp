@@ -219,14 +219,17 @@ int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance,
           CreateCameraRay(origin, direction, x, y, kWidth, kHeight,
                           camera_to_world_matrix);
 
-          const auto color =
+          auto color =
               ray_tracer::TraceRays(visible_shadows, show_reflections, meshes,
                                     direction, origin, light_position);
 
+          color = DirectX::XMVectorMultiply(color,
+                                            DirectX::XMVectorReplicate(255.0f));
+
           current_view.At(y, x) = utils::win32::CreateHighColor(
-              static_cast<uint8_t>(color.x * 255),
-              static_cast<uint8_t>(color.y * 255),
-              static_cast<uint8_t>(color.z * 255));
+              static_cast<uint8_t>(DirectX::XMVectorGetX(color)),
+              static_cast<uint8_t>(DirectX::XMVectorGetY(color)),
+              static_cast<uint8_t>(DirectX::XMVectorGetZ(color)));
         });
 
     // Render to window.
