@@ -4,51 +4,65 @@
 #include <ranges>
 
 namespace {
+// Calculate distance between two vectors.
 inline float CalculateDistance(DirectX::FXMVECTOR a, DirectX::FXMVECTOR b) {
   return DirectX::XMVectorGetX(
       DirectX::XMVector3LengthEst(DirectX::XMVectorSubtract(b, a)));
 }
 
-struct MeshBatch {
-  std::span<model::Mesh> meshes;
-  size_t current_mesh_index;
-  size_t current_face_index;
-};
+// Check if the ray from intersection point to light intersects with any mesh.
+inline bool IntersectsWithShadow(const std::span<model::Mesh>& meshes,
+                                 size_t current_mesh_index,
+                                 size_t current_face_index, size_t mesh_index,
+                                 size_t face_index,
+                                 DirectX::FXMVECTOR intersection_point,
+                                 const DirectX::XMFLOAT3A& light_position) {
+  const auto& face = meshes[mesh_index].second[face_index];
+  DirectX::XMVECTOR vertex_a{};
+  DirectX::XMVECTOR vertex_b{};
+  DirectX::XMVECTOR vertex_c{};
+  utils::xm::triangle::Load(vertex_a, vertex_b, vertex_c,
+                            meshes[mesh_index].first, face);
+  auto offset_intersection_point =
+      DirectX::XMVectorAdd(intersection_point, DirectX::g_XMEpsilon);
+  auto shadow_direction = utils::xm::ray::CalculateDirection(
+      intersection_point, utils::xm::float3a::Load(light_position));
+  auto shadow_result = utils::xm::triangle::Intersect(
+      vertex_a, vertex_b, vertex_c, offset_intersection_point,
+      shadow_direction);
 
-inline bool IsShadowed(DirectX::XMVECTOR& final_color, const MeshBatch& batch,
+  return shadow_result.has_value() && shadow_result->z > 0.0f &&
+         shadow_result->z <
+             CalculateDistance(DirectX::XMLoadFloat3A(&light_position),
+                               intersection_point);
+}
+
+// Check if a point is shadowed by geometry in the scene.
+inline bool IsShadowed(DirectX::XMVECTOR& final_color,
+                       const std::span<model::Mesh>& meshes,
+                       size_t current_mesh_index, size_t current_face_index,
                        DirectX::FXMVECTOR intersection_point,
                        const DirectX::XMFLOAT3A& light_position) {
-  constexpr float SHADOW_INTENSITY = 0.0625f;
+  constexpr float kShadowIntensity = 0.0625f;
   float total_intensity = 0.0f;
 
   auto shadow_direction = utils::xm::ray::CalculateDirection(
       intersection_point, utils::xm::float3a::Load(light_position));
 
-  for (size_t mesh_index = 0; mesh_index < batch.meshes.size(); ++mesh_index) {
-    if (mesh_index == batch.current_mesh_index) continue;
+  // Iterate through meshes and faces.
+  for (size_t mesh_index = 0; mesh_index < meshes.size(); ++mesh_index) {
+    if (mesh_index == current_mesh_index) continue;
 
-    const auto& mesh = batch.meshes[mesh_index];
+    const auto& mesh = meshes[mesh_index];
     for (size_t face_index = 0; face_index < mesh.second.size(); ++face_index) {
-      if (mesh_index == batch.current_mesh_index &&
-          face_index == batch.current_face_index)
+      if (mesh_index == current_mesh_index && face_index == current_face_index)
         continue;
 
-      const auto& face = mesh.second[face_index];
-      DirectX::XMVECTOR vertex_a{};
-      DirectX::XMVECTOR vertex_b{};
-      DirectX::XMVECTOR vertex_c{};
-      utils::xm::triangle::Load(vertex_a, vertex_b, vertex_c, mesh.first, face);
-      auto offset_intersection_point =
-          DirectX::XMVectorAdd(intersection_point, DirectX::g_XMEpsilon);
-      auto shadow_result = utils::xm::triangle::Intersect(
-          vertex_a, vertex_b, vertex_c, offset_intersection_point,
-          shadow_direction);
-
-      if (shadow_result.has_value() && shadow_result->z > 0.0f &&
-          shadow_result->z <
-              CalculateDistance(DirectX::XMLoadFloat3A(&light_position),
-                                intersection_point)) {
-        total_intensity += SHADOW_INTENSITY;
+      // Check for intersection.
+      if (IntersectsWithShadow(meshes, current_mesh_index, current_face_index,
+                               mesh_index, face_index, intersection_point,
+                               light_position)) {
+        total_intensity += kShadowIntensity;
         // No need to check further, already in shadow.
         break;
       }
@@ -61,47 +75,72 @@ inline bool IsShadowed(DirectX::XMVECTOR& final_color, const MeshBatch& batch,
   return total_intensity > 0.0f;
 }
 
+// Check if the ray from intersection point to reflection intersects with any
+// mesh.
+inline bool IntersectsWithReflection(const std::span<model::Mesh>& meshes,
+                                     size_t current_mesh_index,
+                                     size_t current_face_index,
+                                     size_t mesh_index, size_t face_index,
+                                     DirectX::FXMVECTOR intersection_point,
+                                     DirectX::FXMVECTOR incident_direction,
+                                     DirectX::FXMVECTOR surface_normal,
+                                     DirectX::XMVECTOR& final_color) {
+  DirectX::XMVECTOR vertex_a{};
+  DirectX::XMVECTOR vertex_b{};
+  DirectX::XMVECTOR vertex_c{};
+  utils::xm::triangle::Load(vertex_a, vertex_b, vertex_c,
+                            meshes[mesh_index].first,
+                            meshes[mesh_index].second[face_index]);
+  const auto reflection_direction = DirectX::XMVector3NormalizeEst(
+      DirectX::XMVector3Reflect(incident_direction, surface_normal));
+
+  const auto offset_intersection_point =
+      DirectX::XMVectorAdd(intersection_point, DirectX::g_XMEpsilon);
+
+  auto reflection_result = utils::xm::triangle::Intersect(
+      vertex_a, vertex_b, vertex_c, offset_intersection_point,
+      reflection_direction);
+
+  if (reflection_result.has_value() && reflection_result->z > 0.0f) {
+    // Calculate the color at the reflection intersection point.
+    const auto barycentric_coords =
+        DirectX::XMVectorSet(1.0f - reflection_result->x - reflection_result->y,
+                             reflection_result->x, reflection_result->y, 0.0f);
+
+    const auto reflection_color =
+        DirectX::XMVectorMultiply(barycentric_coords, final_color);
+
+    constexpr float reflectivity = 0.95f;
+    final_color = DirectX::XMVectorSaturate(
+        DirectX::XMVectorLerp(final_color, reflection_color, reflectivity));
+    return true;
+  }
+
+  return false;
+}
+
+// Trace the reflection ray and calculate reflection color.
 inline void TraceReflectionRay(DirectX::XMVECTOR& final_color,
-                               const MeshBatch& batch,
+                               const std::span<model::Mesh>& meshes,
+                               size_t current_mesh_index,
+                               size_t current_face_index,
                                DirectX::FXMVECTOR intersection_point,
                                DirectX::FXMVECTOR incident_direction,
                                DirectX::FXMVECTOR surface_normal) {
-  for (auto mesh_index = 0U; mesh_index < batch.meshes.size(); ++mesh_index) {
+  for (size_t mesh_index = 0; mesh_index < meshes.size(); ++mesh_index) {
     // Skip the current mesh.
-    if (mesh_index == batch.current_mesh_index) {
+    if (mesh_index == current_mesh_index) {
       continue;
     }
 
-    for (auto face_index = 0U;
-         face_index < batch.meshes[mesh_index].second.size(); ++face_index) {
-      DirectX::XMVECTOR vertex_a{};
-      DirectX::XMVECTOR vertex_b{};
-      DirectX::XMVECTOR vertex_c{};
-      utils::xm::triangle::Load(vertex_a, vertex_b, vertex_c,
-                                batch.meshes[mesh_index].first,
-                                batch.meshes[mesh_index].second[face_index]);
-      const auto reflection_direction = DirectX::XMVector3NormalizeEst(
-          DirectX::XMVector3Reflect(incident_direction, surface_normal));
-
-      const auto offset_intersection_point =
-          DirectX::XMVectorAdd(intersection_point, DirectX::g_XMEpsilon);
-
-      auto reflection_result = utils::xm::triangle::Intersect(
-          vertex_a, vertex_b, vertex_c, offset_intersection_point,
-          reflection_direction);
-
-      if (reflection_result.has_value() && reflection_result->z > 0.0f) {
-        // Calculate the color at the reflection intersection point.
-        const auto barycentric_coords = DirectX::XMVectorSet(
-            1.0f - reflection_result->x - reflection_result->y,
-            reflection_result->x, reflection_result->y, 0.0f);
-
-        const auto reflection_color =
-            DirectX::XMVectorMultiply(barycentric_coords, final_color);
-
-        constexpr float reflectivity = 0.95f;
-        final_color = DirectX::XMVectorSaturate(
-            DirectX::XMVectorLerp(final_color, reflection_color, reflectivity));
+    for (size_t face_index = 0; face_index < meshes[mesh_index].second.size();
+         ++face_index) {
+      // Check for reflection intersection.
+      if (IntersectsWithReflection(meshes, current_mesh_index,
+                                   current_face_index, mesh_index, face_index,
+                                   intersection_point, incident_direction,
+                                   surface_normal, final_color)) {
+        break;
       }
     }
   }
@@ -147,7 +186,7 @@ DirectX::XMVECTOR ray_tracer::TraceRays(
           if (visible_shadows) {
             DirectX::XMVECTOR shadow_color = color;
             in_shadow |=
-                IsShadowed(shadow_color, {meshes, mesh_index, face_index},
+                IsShadowed(shadow_color, meshes, mesh_index, face_index,
                            world_intersection, light_position);
             color = shadow_color;
           }
@@ -174,7 +213,7 @@ DirectX::XMVECTOR ray_tracer::TraceRays(
         color = DirectX::XMVectorSaturate(accumulated_color);
 
         if (show_reflections) {
-          TraceReflectionRay(color, {meshes, mesh_index, face_index},
+          TraceReflectionRay(color, meshes, mesh_index, face_index,
                              world_intersection, xm_world_direction,
                              xm_surface_normal);
         }
