@@ -151,80 +151,83 @@ inline void TraceReflectionRay(DirectX::XMVECTOR& final_color,
 }  // namespace
 
 DirectX::XMVECTOR ray_tracer::TraceRays(
-    bool& visible_shadows, bool& show_reflections,
-    std::span<model::Mesh> meshes, DirectX::FXMVECTOR xm_world_direction,
-    DirectX::FXMVECTOR xm_world_origin,
+    ShadowVisibility shadow_visibility,
+    ReflectionVisibility reflection_visibility, std::span<model::Mesh> meshes,
+    DirectX::FXMVECTOR world_direction, DirectX::FXMVECTOR world_origin,
     std::span<const DirectX::XMFLOAT3A> light_positions) {
   float closest_distance = std::numeric_limits<float>::infinity();
-  const auto ambient = DirectX::XMVectorReplicate(0.2f);
-  DirectX::XMVECTOR color = DirectX::g_XMOne;
+  const auto ambient_color = DirectX::XMVectorReplicate(0.2f);
+  DirectX::XMVECTOR result_color = DirectX::g_XMOne;
 
   for (size_t mesh_index = 0; mesh_index < meshes.size(); ++mesh_index) {
     for (size_t face_index = 0; face_index < meshes[mesh_index].second.size();
          ++face_index) {
-      DirectX::XMVECTOR xm_a{};
-      DirectX::XMVECTOR xm_b{};
-      DirectX::XMVECTOR xm_c{};
-      utils::xm::triangle::Load(xm_a, xm_b, xm_c, meshes[mesh_index].first,
+      DirectX::XMVECTOR vertex_a{};
+      DirectX::XMVECTOR vertex_b{};
+      DirectX::XMVECTOR vertex_c{};
+      utils::xm::triangle::Load(vertex_a, vertex_b, vertex_c,
+                                meshes[mesh_index].first,
                                 meshes[mesh_index].second[face_index]);
 
-      const auto result = utils::xm::triangle::Intersect(
-          xm_a, xm_b, xm_c, xm_world_origin, xm_world_direction);
+      const auto intersection_result = utils::xm::triangle::Intersect(
+          vertex_a, vertex_b, vertex_c, world_origin, world_direction);
 
-      if (result.has_value() && result->z > 1.0f &&
-          result->z < closest_distance) {
-        const auto world_intersection =
-            utils::xm::ray::At(xm_world_origin, xm_world_direction, result->z);
+      if (intersection_result.has_value() && intersection_result->z > 1.0f &&
+          intersection_result->z < closest_distance) {
+        const auto intersection_point = utils::xm::ray::At(
+            world_origin, world_direction, intersection_result->z);
 
-        DirectX::XMVECTOR barycentrics = DirectX::XMVectorSet(
-            1.0f - result->x - result->y, result->x, result->y, 1.0f);
+        DirectX::XMVECTOR barycentric_coords = DirectX::XMVectorSet(
+            1.0f - intersection_result->x - intersection_result->y,
+            intersection_result->x, intersection_result->y, 1.0f);
 
-        DirectX::XMVECTOR xm_surface_normal = DirectX::XMVector3Normalize(
-            utils::xm::triangle::GetSurfaceNormal(xm_a, xm_b, xm_c));
+        DirectX::XMVECTOR surface_normal =
+            DirectX::XMVector3Normalize(utils::xm::triangle::GetSurfaceNormal(
+                vertex_a, vertex_b, vertex_c));
 
         DirectX::XMVECTOR accumulated_color = DirectX::g_XMZero;
 
         for (const auto& light_position : light_positions) {
           bool in_shadow = false;
-          if (visible_shadows) {
-            DirectX::XMVECTOR shadow_color = color;
+          if (shadow_visibility == ShadowVisibility::Visible) {
+            DirectX::XMVECTOR shadow_color = result_color;
             in_shadow |=
                 IsShadowed(shadow_color, meshes, mesh_index, face_index,
-                           world_intersection, light_position);
-            color = shadow_color;
+                           intersection_point, light_position);
+            result_color = shadow_color;
           }
 
           if (!in_shadow) {
-            DirectX::XMVECTOR xm_light_direction =
+            DirectX::XMVECTOR light_direction =
                 utils::xm::ray::CalculateDirection(
-                    world_intersection,
+                    intersection_point,
                     utils::xm::float3a::Load(light_position));
 
             float lambertian = DirectX::XMVectorGetX(
-                DirectX::XMVector3Dot(xm_surface_normal, xm_light_direction));
+                DirectX::XMVector3Dot(surface_normal, light_direction));
 
-            DirectX::XMVECTOR xm_lambertian =
+            DirectX::XMVECTOR lambertian_color =
                 DirectX::XMVectorReplicate(lambertian * 0.8f);
 
             accumulated_color = DirectX::XMVectorMultiplyAdd(
-                barycentrics, xm_lambertian, accumulated_color);
+                barycentric_coords, lambertian_color, accumulated_color);
           }
         }
 
         accumulated_color = DirectX::XMVectorMultiplyAdd(
-            ambient, DirectX::g_XMOne, accumulated_color);
-        color = DirectX::XMVectorSaturate(accumulated_color);
+            ambient_color, DirectX::g_XMOne, accumulated_color);
+        result_color = DirectX::XMVectorSaturate(accumulated_color);
 
-        if (show_reflections) {
-          TraceReflectionRay(color, meshes, mesh_index, face_index,
-                             world_intersection, xm_world_direction,
-                             xm_surface_normal);
+        if (reflection_visibility == ReflectionVisibility::Visible) {
+          TraceReflectionRay(result_color, meshes, mesh_index, face_index,
+                             intersection_point, world_direction,
+                             surface_normal);
         }
 
-        closest_distance = result->z;
+        closest_distance = intersection_result->z;
       }
     }
   }
 
-  return color;
+  return result_color;
 }

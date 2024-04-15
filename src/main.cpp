@@ -128,12 +128,15 @@ int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance,
   DirectX::XMVECTOR light_position =
       DirectX::XMVectorSet(0.0f, 0.0f, 0.1f, 0.0f);
 
-  std::array<DirectX::XMFLOAT3A, 2> light_positions = {
+  /* std::array<DirectX::XMFLOAT3A, 2> light_positions = {
       DirectX::XMFLOAT3A(0.0f, 0.0f, -1.0f),
-      DirectX::XMFLOAT3A(0.0f, 4.0f, -8.0f)};
+      DirectX::XMFLOAT3A(0.0f, 4.0f, -8.0f)};*/
 
-  bool visible_shadows = false;
-  bool show_reflections = false;
+  std::array<DirectX::XMFLOAT3A, 1> light_positions = {
+      DirectX::XMFLOAT3A(0.0f, 0.0f, -1.0f)};
+
+  auto shadow_visibility = ray_tracer::ShadowVisibility::Hidden;
+  auto reflection_visibility = ray_tracer::ReflectionVisibility::Hidden;
 
   while (running) {
     const auto real_time = utils::win32::GetMilliseconds();
@@ -161,13 +164,18 @@ int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance,
     for (auto i = 0U; i < key_states.size(); ++i) {
       key_states[i] = utils::win32::IsKeyPressed(static_cast<INT>(i));
     }
-
     if (key_states[VK_F1] && !prev_key_states[VK_F1]) {
-      visible_shadows = !visible_shadows;
+      shadow_visibility =
+          (shadow_visibility == ray_tracer::ShadowVisibility::Visible)
+              ? ray_tracer::ShadowVisibility::Hidden
+              : ray_tracer::ShadowVisibility::Visible;
     }
 
     if (key_states[VK_F2] && !prev_key_states[VK_F2]) {
-      show_reflections = !show_reflections;
+      reflection_visibility =
+          (reflection_visibility == ray_tracer::ReflectionVisibility::Visible)
+              ? ray_tracer::ReflectionVisibility::Hidden
+              : ray_tracer::ReflectionVisibility::Visible;
     }
 
     // Update previous key states.
@@ -224,8 +232,8 @@ int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance,
                           camera_to_world_matrix);
 
           auto color =
-              ray_tracer::TraceRays(visible_shadows, show_reflections, meshes,
-                                    direction, origin, light_positions);
+              ray_tracer::TraceRays(shadow_visibility, reflection_visibility,
+                                    meshes, direction, origin, light_positions);
 
           color = DirectX::XMVectorMultiply(color,
                                             DirectX::XMVectorReplicate(255.0f));

@@ -6,9 +6,12 @@
 #include "model.h"
 
 namespace ray_tracer {
+enum class ShadowVisibility { Visible, Hidden };
+enum class ReflectionVisibility { Visible, Hidden };
+
 DirectX::XMVECTOR TraceRays(
-    bool& visible_shadows, bool& show_reflections,
-    std::span<model::Mesh> meshes, DirectX::FXMVECTOR xm_world_direction,
-    DirectX::FXMVECTOR xm_world_origin,
+    ShadowVisibility shadow_visibility,
+    ReflectionVisibility reflection_visibility, std::span<model::Mesh> meshes,
+    DirectX::FXMVECTOR world_direction, DirectX::FXMVECTOR world_origin,
     std::span<const DirectX::XMFLOAT3A> light_positions);
 }  // namespace ray_tracer
