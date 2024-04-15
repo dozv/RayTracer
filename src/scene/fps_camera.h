@@ -7,7 +7,7 @@
 namespace scene {
 class FpsCamera {
  public:
-  inline FpsCamera() : position(0.0f, 0.0f, 0.0f), pitch_(0.0f), yaw_(0.0f) {}
+  inline FpsCamera() : position_(0.0f, 0.0f, 0.0f), pitch_(0.0f), yaw_(0.0f) {}
 
   inline void Move(float delta_forward, float delta_right) {
     DirectX::XMFLOAT3A move_direction{};
@@ -16,9 +16,9 @@ class FpsCamera {
         DirectX::XMVectorAdd(
             DirectX::XMVectorScale(GetForwardVector(), delta_forward),
             DirectX::XMVectorScale(GetRightVector(), delta_right)));
-    position.x += move_direction.x;
-    position.y += move_direction.y;
-    position.z += move_direction.z;
+    position_.x += move_direction.x;
+    position_.y += move_direction.y;
+    position_.z += move_direction.z;
   }
 
   inline void Rotate(float delta_pitch, float delta_yaw) {
@@ -28,7 +28,7 @@ class FpsCamera {
   }
 
   inline DirectX::XMMATRIX GetWorldToCameraMatrix() const {
-    return DirectX::XMMatrixLookToRH(DirectX::XMLoadFloat3(&position),
+    return DirectX::XMMatrixLookToRH(DirectX::XMLoadFloat3(&position_),
                                      GetForwardVector(), GetUpVector());
   }
 
@@ -36,10 +36,10 @@ class FpsCamera {
     return DirectX::XMMatrixInverse(nullptr, GetWorldToCameraMatrix());
   }
 
-  inline DirectX::XMFLOAT3A GetPosition() const { return position; }
+  inline DirectX::XMFLOAT3A GetPosition() const { return position_; }
 
  private:
-  DirectX::XMFLOAT3A position;
+  DirectX::XMFLOAT3A position_;
   float pitch_;
   float yaw_;
   float roll_{};
