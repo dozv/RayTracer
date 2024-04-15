@@ -66,11 +66,13 @@ class MeshView {
   inline MeshView& SortFacesByAvgZ() {
     std::sort(faces_.begin(), faces_.end(), [this](auto& face_1, auto& face_2) {
       constexpr auto kOneThird = 1.0f / 3.0f;
-      const float avg_z1 = (vertices_[face_1.x].z + vertices_[face_1.y].z +
-                            vertices_[face_1.z].z) *
+      const float avg_z1 = (vertices_[static_cast<size_t>(face_1.x)].z +
+                            vertices_[static_cast<size_t>(face_1.y)].z +
+                            vertices_[static_cast<size_t>(face_1.z)].z) *
                            kOneThird;
-      const float avg_z2 = (vertices_[face_2.x].z + vertices_[face_2.y].z +
-                            vertices_[face_2.z].z) *
+      const float avg_z2 = (vertices_[static_cast<size_t>(face_2.x)].z +
+                            vertices_[static_cast<size_t>(face_2.y)].z +
+                            vertices_[static_cast<size_t>(face_2.z)].z) *
                            kOneThird;
       return avg_z1 < avg_z2;
     });
