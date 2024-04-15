@@ -41,7 +41,6 @@ inline bool IsShadowed(DirectX::XMVECTOR& final_color,
                        size_t outer_mesh_index, size_t outer_face_index,
                        DirectX::FXMVECTOR intersection_point,
                        const DirectX::XMFLOAT3A& light_position) {
-  constexpr float kShadowIntensity = 0.0625f;
   float total_intensity = 0.0f;
 
   auto shadow_direction = utils::xm::ray::CalculateDirection(
@@ -59,7 +58,16 @@ inline bool IsShadowed(DirectX::XMVECTOR& final_color,
       // Check for intersection.
       if (IntersectsWithShadow(meshes, mesh_index, face_index,
                                intersection_point, light_position)) {
-        total_intensity += kShadowIntensity;
+        // Calculate the distance from the intersection point to the light
+        // source.
+        float distance = CalculateDistance(
+            DirectX::XMLoadFloat3A(&light_position), intersection_point);
+
+        // Calculate the shadow intensity based on the distance.
+        float shadow_intensity = 1.0f / (distance * distance);
+
+        total_intensity += shadow_intensity;
+
         // No need to check further, already in shadow.
         break;
       }
@@ -148,6 +156,14 @@ inline void TraceReflectionRay(DirectX::XMVECTOR& final_color,
     }
   }
 }
+
+inline float CalculateLambertian(DirectX::FXMVECTOR surface_normal,
+                                 DirectX::FXMVECTOR light_direction) {
+  const float intensity = DirectX::XMVectorGetX(DirectX::XMVectorSaturate(
+      DirectX::XMVector3Dot(surface_normal, light_direction)));
+
+  return intensity;
+}
 }  // namespace
 
 DirectX::XMVECTOR ray_tracer::TraceRays(
@@ -203,11 +219,13 @@ DirectX::XMVECTOR ray_tracer::TraceRays(
                     intersection_point,
                     utils::xm::float3a::Load(light_position));
 
-            float lambertian = DirectX::XMVectorGetX(
-                DirectX::XMVector3Dot(surface_normal, light_direction));
+            constexpr auto ambient_intensity = 0.25f;
+            float light_intensity =
+                CalculateLambertian(surface_normal, light_direction) +
+                ambient_intensity;
 
             DirectX::XMVECTOR lambertian_color =
-                DirectX::XMVectorReplicate(lambertian * 0.8f);
+                DirectX::XMVectorReplicate(light_intensity * 0.8f);
 
             accumulated_color = DirectX::XMVectorMultiplyAdd(
                 barycentric_coords, lambertian_color, accumulated_color);
