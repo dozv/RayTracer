@@ -17,9 +17,12 @@ struct MeshParams {
 
 inline bool TraceShadowRays(DirectX::XMVECTOR& color, const MeshParams& params,
                             DirectX::FXMVECTOR world_intersection,
-                            DirectX::FXMVECTOR world_shadow_direction,
                             DirectX::FXMVECTOR light_position) {
   bool in_shadow = false;
+
+  auto world_shadow_direction =
+      utils::xm::ray::GetNormalizedDirectionFromPoints(world_intersection,
+                                                       light_position);
 
   for (const auto& mesh : params.meshes) {
     if (&mesh == &params.meshes[params.current_mesh_index]) continue;
@@ -133,10 +136,6 @@ DirectX::XMVECTOR ray_tracer::TraceRays(bool& visible_shadows,
         const auto world_intersection =
             utils::xm::ray::At(xm_world_origin, xm_world_direction, result->z);
 
-        DirectX::XMVECTOR world_shadow_direction =
-            utils::xm::ray::GetNormalizedDirectionFromPoints(world_intersection,
-                                                             light_position);
-
         DirectX::XMVECTOR barycentrics = DirectX::XMVectorSet(
             1.0f - result->x - result->y, result->x, result->y, 1.0f);
 
@@ -144,8 +143,7 @@ DirectX::XMVECTOR ray_tracer::TraceRays(bool& visible_shadows,
         bool in_shadow = false;
         if (visible_shadows) {
           in_shadow = TraceShadowRays(color, {meshes, mesh_index, face_index},
-                                      world_intersection,
-                                      world_shadow_direction, light_position);
+                                      world_intersection, light_position);
         }
 
         // Shade using the Lambertian illumination model, if there is no
