@@ -11,9 +11,9 @@
 #include <vector>
 
 #include "common/common.h"
-#include "graphics/fps_camera.h"
 #include "graphics/model.h"
 #include "graphics/ray_tracer.h"
+#include "scene/fps_camera.h"
 #include "scene/mesh_view.h"
 #include "utils/win32.h"
 #include "utils/xm.h"
@@ -124,7 +124,7 @@ int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance,
   LONGLONG simulation_time = 0;
   std::bitset<256> key_states{};
   std::bitset<256> prev_key_states{};
-  auto fps_camera = FpsCamera();
+  auto fps_camera = scene::FpsCamera();
   DirectX::XMVECTOR light_position =
       DirectX::XMVectorSet(0.0f, 0.0f, 0.1f, 0.0f);
 

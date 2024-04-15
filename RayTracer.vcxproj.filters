@@ -50,7 +50,7 @@
     <ClInclude Include="src\common\common.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\graphics\fps_camera.h">
+    <ClInclude Include="src\scene\fps_camera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\graphics\model.h">

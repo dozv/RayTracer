@@ -4,6 +4,7 @@
 
 #include <cmath>
 
+namespace scene {
 class FpsCamera {
  public:
   inline FpsCamera() : position(0.0f, 0.0f, 0.0f), pitch_(0.0f), yaw_(0.0f) {}
@@ -62,3 +63,4 @@ class FpsCamera {
     return DirectX::XMVector3Cross(GetForwardVector(), GetRightVector());
   }
 };
+}  // namespace scene
