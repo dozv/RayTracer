@@ -149,7 +149,7 @@
       <TreatAngleIncludeAsExternal>true</TreatAngleIncludeAsExternal>
       <TreatWarningAsError>true</TreatWarningAsError>
       <FloatingPointExceptions>false</FloatingPointExceptions>
-      <AdditionalOptions>/wd4530 /wd4324 /wd4577  /wd4668 /wd4514 /wd5045 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/wd4530 /wd4324 /wd4577  /wd4668 /wd4514 /wd5045 /wd4464 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

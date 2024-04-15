@@ -20,8 +20,8 @@
 
 namespace {
 inline void CreateCameraRay(DirectX::XMVECTOR& out_origin,
-                            DirectX::XMVECTOR& out_direction, int x, int y,
-                            int width, int height,
+                            DirectX::XMVECTOR& out_direction, unsigned int x,
+                            unsigned int y, int width, int height,
                             const DirectX::XMMATRIX& camera_to_world_matrix) {
   // Calculate half of the horizontal field of view angle (in radians).
   const float fov_horizontal = std::numbers::pi_v<float> / 2.0f;
@@ -32,10 +32,10 @@ inline void CreateCameraRay(DirectX::XMVECTOR& out_origin,
       static_cast<float>(width) / static_cast<float>(height);
   const float inverse_aspect_ratio = 1.0f / aspect_ratio;
 
-  const float ndc_x =
-      std::lerp(-1.0f, 1.0f, (static_cast<float>(x) + 0.5f) / width);
-  const float ndc_y =
-      std::lerp(1.0f, -1.0f, (static_cast<float>(y) + 0.5f) / height);
+  const float ndc_x = std::lerp(
+      -1.0f, 1.0f, (static_cast<float>(x) + 0.5f) / static_cast<float>(width));
+  const float ndc_y = std::lerp(
+      1.0f, -1.0f, (static_cast<float>(y) + 0.5f) / static_cast<float>(height));
 
   const float camera_x = half_angle_tan * ndc_x;
   const float camera_y = inverse_aspect_ratio * half_angle_tan * ndc_y;
@@ -83,7 +83,7 @@ int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance,
   std::vector<DirectX::XMUINT2> pixels(kWidth * kHeight);
   for (auto y = 0U; y < kHeight; ++y) {
     for (auto x = 0U; x < kWidth; ++x) {
-      pixels[y * kWidth + x] = {x, y};
+      pixels[static_cast<size_t>(y) * kWidth + x] = {x, y};
     }
   }
 
