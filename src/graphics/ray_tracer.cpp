@@ -21,8 +21,7 @@ inline bool TraceShadowRays(DirectX::XMVECTOR& color, const MeshParams& params,
   bool in_shadow = false;
 
   auto world_shadow_direction =
-      utils::xm::ray::GetNormalizedDirectionFromPoints(world_intersection,
-                                                       light_position);
+      utils::xm::ray::CalculateDirection(world_intersection, light_position);
 
   for (const auto& mesh : params.meshes) {
     if (&mesh == &params.meshes[params.current_mesh_index]) continue;

@@ -76,9 +76,9 @@ inline DirectX::XMVECTOR At(DirectX::FXMVECTOR origin,
                                       origin);
 }
 
-inline DirectX::XMVECTOR GetNormalizedDirectionFromPoints(
-    DirectX::FXMVECTOR o, DirectX::FXMVECTOR p) {
-  return DirectX::XMVector3Normalize(DirectX::XMVectorSubtract(p, o));
+inline DirectX::XMVECTOR CalculateDirection(DirectX::FXMVECTOR a,
+                                            DirectX::FXMVECTOR b) {
+  return DirectX::XMVector3NormalizeEst(DirectX::XMVectorSubtract(b, a));
 }
 }  // namespace ray
 }  // namespace utils::xm
