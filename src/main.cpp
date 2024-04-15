@@ -128,6 +128,10 @@ int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance,
   DirectX::XMVECTOR light_position =
       DirectX::XMVectorSet(0.0f, 0.0f, 0.1f, 0.0f);
 
+  std::array<DirectX::XMFLOAT3A, 2> light_positions = {
+      DirectX::XMFLOAT3A(0.0f, 0.0f, -1.0f),
+      DirectX::XMFLOAT3A(0.0f, 4.0f, -8.0f)};
+
   bool visible_shadows = false;
   bool show_reflections = false;
 
@@ -221,7 +225,7 @@ int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance,
 
           auto color =
               ray_tracer::TraceRays(visible_shadows, show_reflections, meshes,
-                                    direction, origin, light_position);
+                                    direction, origin, light_positions);
 
           color = DirectX::XMVectorMultiply(color,
                                             DirectX::XMVectorReplicate(255.0f));
