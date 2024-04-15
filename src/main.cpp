@@ -12,9 +12,9 @@
 
 #include "common/common.h"
 #include "graphics/fps_camera.h"
-#include "graphics/mesh_view.h"
 #include "graphics/model.h"
 #include "graphics/ray_tracer.h"
+#include "scene/mesh_view.h"
 #include "utils/win32.h"
 #include "utils/xm.h"
 
@@ -97,12 +97,12 @@ int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev_instance,
   meshes.push_back(model::LoadRectangle());
   meshes.push_back(model::LoadRectangle());
 
-  auto cube_1 = graphics::MeshView(meshes[0].first, meshes[0].second);
-  auto cube_2 = graphics::MeshView(meshes[1].first, meshes[1].second);
-  auto cube_3 = graphics::MeshView(meshes[2].first, meshes[2].second);
-  auto octahedron = graphics::MeshView(meshes[3].first, meshes[3].second);
-  auto rectangle_1 = graphics::MeshView(meshes[4].first, meshes[4].second);
-  auto rectangle_2 = graphics::MeshView(meshes[5].first, meshes[5].second);
+  auto cube_1 = scene::MeshView(meshes[0].first, meshes[0].second);
+  auto cube_2 = scene::MeshView(meshes[1].first, meshes[1].second);
+  auto cube_3 = scene::MeshView(meshes[2].first, meshes[2].second);
+  auto octahedron = scene::MeshView(meshes[3].first, meshes[3].second);
+  auto rectangle_1 = scene::MeshView(meshes[4].first, meshes[4].second);
+  auto rectangle_2 = scene::MeshView(meshes[5].first, meshes[5].second);
 
   cube_1.Translate(0.0f, 0.0f, -4.0f);
   cube_2.Translate(0.0f, 2.0f, -8.0f);

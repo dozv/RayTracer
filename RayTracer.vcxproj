@@ -199,9 +199,9 @@
   <ItemGroup>
     <ClInclude Include="src\graphics\fps_camera.h" />
     <ClInclude Include="src\common\common.h" />
-    <ClInclude Include="src\graphics\mesh_view.h" />
     <ClInclude Include="src\graphics\ray_tracer.h" />
     <ClInclude Include="src\graphics\model.h" />
+    <ClInclude Include="src\scene\mesh_view.h" />
     <ClInclude Include="src\utils\win32.h" />
     <ClInclude Include="src\utils\xm.h" />
   </ItemGroup>
