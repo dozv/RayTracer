@@ -15,14 +15,14 @@ struct MeshBatch {
   size_t current_face_index;
 };
 
-inline bool IsShadowed(DirectX::XMVECTOR& color, const MeshBatch& batch,
-                       DirectX::FXMVECTOR world_intersection,
+inline bool IsShadowed(DirectX::XMVECTOR& final_color, const MeshBatch& batch,
+                       DirectX::FXMVECTOR intersection_point,
                        const DirectX::XMFLOAT3A& light_position) {
-  constexpr float kShadowIntensity = 0.0625f;
+  constexpr float SHADOW_INTENSITY = 0.0625f;
   float total_intensity = 0.0f;
 
-  auto world_shadow_direction = utils::xm::ray::CalculateDirection(
-      world_intersection, utils::xm::float3a::Load(light_position));
+  auto shadow_direction = utils::xm::ray::CalculateDirection(
+      intersection_point, utils::xm::float3a::Load(light_position));
 
   for (size_t mesh_index = 0; mesh_index < batch.meshes.size(); ++mesh_index) {
     if (mesh_index == batch.current_mesh_index) continue;
@@ -34,19 +34,21 @@ inline bool IsShadowed(DirectX::XMVECTOR& color, const MeshBatch& batch,
         continue;
 
       const auto& face = mesh.second[face_index];
-      DirectX::XMVECTOR shadow_a{}, shadow_b{}, shadow_c{};
-      utils::xm::triangle::Load(shadow_a, shadow_b, shadow_c, mesh.first, face);
-      auto offset_world_origin =
-          DirectX::XMVectorAdd(world_intersection, DirectX::g_XMEpsilon);
+      DirectX::XMVECTOR vertex_a{};
+      DirectX::XMVECTOR vertex_b{};
+      DirectX::XMVECTOR vertex_c{};
+      utils::xm::triangle::Load(vertex_a, vertex_b, vertex_c, mesh.first, face);
+      auto offset_intersection_point =
+          DirectX::XMVectorAdd(intersection_point, DirectX::g_XMEpsilon);
       auto shadow_result = utils::xm::triangle::Intersect(
-          shadow_a, shadow_b, shadow_c, offset_world_origin,
-          world_shadow_direction);
+          vertex_a, vertex_b, vertex_c, offset_intersection_point,
+          shadow_direction);
 
       if (shadow_result.has_value() && shadow_result->z > 0.0f &&
           shadow_result->z <
               CalculateDistance(DirectX::XMLoadFloat3A(&light_position),
-                                world_intersection)) {
-        total_intensity += kShadowIntensity;
+                                intersection_point)) {
+        total_intensity += SHADOW_INTENSITY;
         // No need to check further, already in shadow.
         break;
       }
@@ -54,56 +56,52 @@ inline bool IsShadowed(DirectX::XMVECTOR& color, const MeshBatch& batch,
   }
 
   // Update the color based on the total intensity.
-  color = DirectX::XMVectorReplicate(total_intensity);
+  final_color = DirectX::XMVectorReplicate(total_intensity);
 
   return total_intensity > 0.0f;
 }
 
-inline void TraceReflectionRay(DirectX::XMVECTOR& color,
-                               const MeshBatch& params,
-                               DirectX::FXMVECTOR world_intersection,
-                               DirectX::FXMVECTOR xm_world_direction,
-                               DirectX::FXMVECTOR xm_surface_normal) {
-  for (auto reflection_mesh_index = 0U;
-       reflection_mesh_index < params.meshes.size(); ++reflection_mesh_index) {
+inline void TraceReflectionRay(DirectX::XMVECTOR& final_color,
+                               const MeshBatch& batch,
+                               DirectX::FXMVECTOR intersection_point,
+                               DirectX::FXMVECTOR incident_direction,
+                               DirectX::FXMVECTOR surface_normal) {
+  for (auto mesh_index = 0U; mesh_index < batch.meshes.size(); ++mesh_index) {
     // Skip the current mesh.
-    if (reflection_mesh_index == params.current_mesh_index) {
+    if (mesh_index == batch.current_mesh_index) {
       continue;
     }
 
-    for (auto reflection_face_index = 0U;
-         reflection_face_index <
-         params.meshes[reflection_mesh_index].second.size();
-         ++reflection_face_index) {
-      DirectX::XMVECTOR reflection_a{};
-      DirectX::XMVECTOR reflection_b{};
-      DirectX::XMVECTOR reflection_c{};
-      utils::xm::triangle::Load(
-          reflection_a, reflection_b, reflection_c,
-          params.meshes[reflection_mesh_index].first,
-          params.meshes[reflection_mesh_index].second[reflection_face_index]);
+    for (auto face_index = 0U;
+         face_index < batch.meshes[mesh_index].second.size(); ++face_index) {
+      DirectX::XMVECTOR vertex_a{};
+      DirectX::XMVECTOR vertex_b{};
+      DirectX::XMVECTOR vertex_c{};
+      utils::xm::triangle::Load(vertex_a, vertex_b, vertex_c,
+                                batch.meshes[mesh_index].first,
+                                batch.meshes[mesh_index].second[face_index]);
       const auto reflection_direction = DirectX::XMVector3NormalizeEst(
-          DirectX::XMVector3Reflect(xm_world_direction, xm_surface_normal));
+          DirectX::XMVector3Reflect(incident_direction, surface_normal));
 
-      const auto offset_world_origin =
-          DirectX::XMVectorAdd(world_intersection, DirectX::g_XMEpsilon);
+      const auto offset_intersection_point =
+          DirectX::XMVectorAdd(intersection_point, DirectX::g_XMEpsilon);
 
       auto reflection_result = utils::xm::triangle::Intersect(
-          reflection_a, reflection_b, reflection_c, offset_world_origin,
+          vertex_a, vertex_b, vertex_c, offset_intersection_point,
           reflection_direction);
 
       if (reflection_result.has_value() && reflection_result->z > 0.0f) {
-        // Calculate the color at the reflection intersection
-        // point.
-        const auto bc = DirectX::XMVectorSet(
+        // Calculate the color at the reflection intersection point.
+        const auto barycentric_coords = DirectX::XMVectorSet(
             1.0f - reflection_result->x - reflection_result->y,
             reflection_result->x, reflection_result->y, 0.0f);
 
-        const auto reflection_color = DirectX::XMVectorMultiply(bc, color);
+        const auto reflection_color =
+            DirectX::XMVectorMultiply(barycentric_coords, final_color);
 
         constexpr float reflectivity = 0.95f;
-        color = DirectX::XMVectorSaturate(
-            DirectX::XMVectorLerp(color, reflection_color, reflectivity));
+        final_color = DirectX::XMVectorSaturate(
+            DirectX::XMVectorLerp(final_color, reflection_color, reflectivity));
       }
     }
   }
