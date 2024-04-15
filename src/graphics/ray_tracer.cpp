@@ -77,14 +77,11 @@ inline bool IsShadowed(DirectX::XMVECTOR& final_color,
 
 // Check if the ray from intersection point to reflection intersects with any
 // mesh.
-inline bool IntersectsWithReflection(const std::span<model::Mesh>& meshes,
-                                     size_t current_mesh_index,
-                                     size_t current_face_index,
-                                     size_t mesh_index, size_t face_index,
-                                     DirectX::FXMVECTOR intersection_point,
-                                     DirectX::FXMVECTOR incident_direction,
-                                     DirectX::FXMVECTOR surface_normal,
-                                     DirectX::XMVECTOR& final_color) {
+inline bool IntersectsWithReflection(
+    DirectX::XMVECTOR& final_color, const std::span<model::Mesh>& meshes,
+    size_t current_mesh_index, size_t current_face_index, size_t mesh_index,
+    size_t face_index, DirectX::FXMVECTOR intersection_point,
+    DirectX::FXMVECTOR incident_direction, DirectX::FXMVECTOR surface_normal) {
   DirectX::XMVECTOR vertex_a{};
   DirectX::XMVECTOR vertex_b{};
   DirectX::XMVECTOR vertex_c{};
@@ -136,10 +133,10 @@ inline void TraceReflectionRay(DirectX::XMVECTOR& final_color,
     for (size_t face_index = 0; face_index < meshes[mesh_index].second.size();
          ++face_index) {
       // Check for reflection intersection.
-      if (IntersectsWithReflection(meshes, current_mesh_index,
+      if (IntersectsWithReflection(final_color, meshes, current_mesh_index,
                                    current_face_index, mesh_index, face_index,
                                    intersection_point, incident_direction,
-                                   surface_normal, final_color)) {
+                                   surface_normal)) {
         break;
       }
     }
