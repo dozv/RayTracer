@@ -1,6 +1,6 @@
 # Ray Tracer
 
-![showcase](showcase.gif)
+[Imgur link to animated GIF](https://imgur.com/xragOqD)
 
 Imagine a virtual camera shooting camera rays pixel by pixel into a scene.
 If a camera ray hits an object like a triangle (a cube is made out of 12 triangles),
